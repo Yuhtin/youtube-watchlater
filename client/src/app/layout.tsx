@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   description: "Manage your YouTube watch later videos in a Kanban board",
   icons: {
     icon: '/favicon.ico',  
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico', 
+    other: [
+      {
+        rel: 'icon',
+        type: 'image/x-icon',
+        url: '/favicon.ico',
+      },
+    ],
   },
 }
 
