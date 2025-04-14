@@ -106,7 +106,6 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6 overflow-hidden">
-            {/* Background elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-30">
                 <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 blur-3xl"></div>
                 <div className="absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl"></div>
@@ -128,7 +127,6 @@ export default function LoginPage() {
             />
 
             <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all duration-300 hover:shadow-blue-500/10">
-                {/* Animated border effect */}
                 <div className="absolute inset-0 rounded-2xl z-0 overflow-hidden opacity-0 group-hover:opacity-100">
                     <div
                         className="absolute inset-0 z-10 rounded-2xl pointer-events-none"
@@ -225,7 +223,6 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {/* Add animation keyframes for border flow */}
             <style jsx global>{`
                 @keyframes border-flow {
                     0% { background-position: 0% 0%; }

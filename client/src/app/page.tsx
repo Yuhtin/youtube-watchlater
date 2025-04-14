@@ -152,14 +152,12 @@ export default function HomePage() {
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 md:p-10 overflow-hidden">
-            {/* Background elements */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-30">
                 <div className="parallax-bg absolute -top-20 -left-20 w-80 h-80 rounded-full bg-gradient-to-r from-blue-500/20 to-cyan-500/20 blur-3xl" data-speed="0.03"></div>
                 <div className="parallax-bg absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl" data-speed="0.05"></div>
                 <div className="parallax-bg absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 blur-3xl" data-speed="0.04"></div>
             </div>
 
-            {/* Content container with glassy effect */}
             <div className="relative z-10 max-w-7xl mx-auto">
                 <Toaster
                     position="top-center"
@@ -175,7 +173,6 @@ export default function HomePage() {
                     }}
                 />
 
-                {/* Header section */}
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-10 shadow-xl">
                     <div className="flex flex-col md:flex-row justify-between items-center">
                         <div className="flex items-center">
@@ -194,7 +191,6 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        {/* Search input */}
                         <div className="mt-4 md:mt-0 w-full md:w-auto">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/40" />
@@ -210,7 +206,6 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {/* Main content section */}
                 <div className="mb-10">
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center">
@@ -262,7 +257,6 @@ export default function HomePage() {
                                     onClick={() => handleUserClick(user.id, user.username)}
                                     className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden cursor-pointer hover:bg-white/10 hover:shadow-lg transition-all duration-300 group relative"
                                 >
-                                    {/* Animated border on hover */}
                                     <div className="absolute inset-0 rounded-2xl z-0 overflow-hidden opacity-0 group-hover:opacity-100">
                                         <div
                                             className="absolute inset-0 z-10 rounded-2xl pointer-events-none animate-border-flow"
@@ -322,7 +316,6 @@ export default function HomePage() {
                                         </div>
                                     </div>
 
-                                    {/* Shine effect overlay */}
                                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-1000">
                                         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1500"></div>
                                     </div>
@@ -333,14 +326,12 @@ export default function HomePage() {
                 </div>
             </div>
 
-            {/* Floating action button with animation */}
             <button
                 onClick={() => setIsModalOpen(true)}
                 className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full p-5 shadow-xl hover:shadow-blue-500/30 hover:scale-110 hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
                 aria-label="Create new watchlater"
             >
                 <Plus className="w-7 h-7" />
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-20"></span>
             </button>
 
             <CreateUserModal
