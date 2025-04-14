@@ -7,27 +7,41 @@ export class CardService {
     constructor(private prisma: PrismaService) { }
 
     async create(data: any) {
-        const status = data.status || data.columnId || 'WATCH_LATER';
-        const { columnId, ...cleanData } = data;
+        try {
+            const existingCard = await this.prisma.card.findFirst({
+                where: {
+                    id: data.id,
+                    userId: data.userId
+                }
+            });
 
-        if (!cleanData.userId) {
-            throw new Error('userId is required');
+            if (existingCard) {
+                return {
+                    statusCode: 409,
+                    message: "Video already exists in your collection",
+                    data: existingCard
+                };
+            }
+
+            return await this.prisma.card.create({
+                data: {
+                    ...data,
+                },
+            });
+        } catch (error) {
+            if (error.code === 'P2002') {
+                return {
+                    statusCode: 409,
+                    message: "Video already exists in your collection",
+                };
+            }
+
+            return {
+                statusCode: 500,
+                message: "Failed to add video",
+                error: error.message
+            };
         }
-
-        const cardsWithSameStatus = await this.prisma.card.count({
-            where: {
-                status: status as ColumnType,
-                userId: cleanData.userId,
-            },
-        });
-
-        return this.prisma.card.create({
-            data: {
-                ...cleanData,
-                status: status as ColumnType,
-                order: cardsWithSameStatus,
-            },
-        });
     }
 
     async reorderCards(cardId: string, newStatus: ColumnType, newOrder: number) {

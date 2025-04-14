@@ -15,11 +15,13 @@ export class CardController {
 
     @UseGuards(JwtAuthGuard)
     @Post()
-    create(@Body() body: any, @Request() req) {
-        return this.cardService.create({
+    async create(@Body() body: any, @Request() req) {
+        const result = await this.cardService.create({
             ...body,
             userId: req.user.userId,
         });
+
+        return result;
     }
 
     @UseGuards(JwtAuthGuard)

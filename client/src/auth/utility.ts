@@ -18,10 +18,12 @@ export async function apiRequest(endpoint: string, options: ApiOptions = {}) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
+    const isBodyString = typeof options.body === 'string';
+
     const config: RequestInit = {
         method: options.method || 'GET',
         headers,
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        body: options.body ? (isBodyString ? options.body : JSON.stringify(options.body)) : undefined,
     };
 
     try {
@@ -34,10 +36,20 @@ export async function apiRequest(endpoint: string, options: ApiOptions = {}) {
         }
 
         if (!response.ok) {
-            throw new Error(`API error: ${response.statusText}`);
+            try {
+                const errorData = await response.json();
+                throw new Error(`API error: ${errorData.message || response.statusText}`);
+            } catch (e) {
+                throw new Error(`API error: ${response.statusText}`);
+            }
         }
 
-        if (response.headers.get('content-type')?.includes('application/json')) {
+        const contentType = response.headers.get('content-type');
+        if (response.status === 204 || !contentType) {
+            return null;
+        }
+
+        if (contentType.includes('application/json')) {
             return await response.json();
         }
 

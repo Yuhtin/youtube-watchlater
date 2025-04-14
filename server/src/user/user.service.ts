@@ -1,10 +1,10 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService) {}
 
     async create(data: { username: string; password: string; imageUrl?: string }) {
         const existingUser = await this.prisma.user.findUnique({
@@ -36,24 +36,31 @@ export class UserService {
                 updatedAt: true,
                 _count: {
                     select: {
-                        cards: true
-                    }
-                }
+                        cards: true,
+                    },
+                },
             },
         });
     }
 
     async findOne(id: string) {
-        return this.prisma.user.findUnique({
+        const user = await this.prisma.user.findUnique({
             where: { id },
-            select: {
-                id: true,
-                username: true,
-                imageUrl: true,
-                createdAt: true,
-                updatedAt: true,
+            include: {
+                _count: {
+                    select: {
+                        cards: true,
+                    },
+                },
             },
         });
+
+        if (!user) {
+            throw new NotFoundException(`User with ID ${id} not found`);
+        }
+
+        const { password, ...result } = user;
+        return result;
     }
 
     async validateUser(username: string, password: string) {
@@ -65,7 +72,7 @@ export class UserService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await this.validatePassword(password, user.password);
 
         if (!isPasswordValid) {
             throw new UnauthorizedException('Invalid credentials');
@@ -73,5 +80,55 @@ export class UserService {
 
         const { password: _, ...result } = user;
         return result;
+    }
+
+    async findById(id: string, includePassword: boolean = false) {
+        const user = await this.prisma.user.findUnique({
+            where: { id },
+            include: {
+                _count: {
+                    select: {
+                        cards: true,
+                    },
+                },
+            },
+        });
+
+        if (!user) {
+            return null;
+        }
+
+        if (!includePassword) {
+            const { password, ...result } = user;
+            return result;
+        }
+        
+        return user;
+    }
+
+    async validatePassword(plainTextPassword: string, hashedPassword: string): Promise<boolean> {
+        try {
+            return await bcrypt.compare(plainTextPassword, hashedPassword);
+        } catch (error) {
+            console.error('Error comparing passwords:', error);
+            return false;
+        }
+    }
+
+    async deleteUser(id: string): Promise<void> {
+        await this.prisma.card.deleteMany({
+            where: { userId: id },
+        });
+
+        try {
+            await this.prisma.user.delete({
+                where: { id },
+            });
+        } catch (error) {
+            if (error.code === 'P2025') {
+                throw new NotFoundException(`User with ID ${id} not found`);
+            }
+            throw error;
+        }
     }
 }

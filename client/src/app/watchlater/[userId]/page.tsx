@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react"
-import { Plus, X, Youtube, ArrowLeft } from "lucide-react"
-import { toast, Toaster } from "sonner"
-import { useRouter, useParams } from "next/navigation"
+import { useState, useEffect, useRef } from "react";
+import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { toast, Toaster } from "sonner";
+import { useRouter, useParams } from "next/navigation";
+import { Dialog } from '@headlessui/react';
 import {
     DndContext,
     closestCenter,
@@ -13,14 +14,14 @@ import {
     useSensors,
     DragOverlay,
     useDroppable,
-} from "@dnd-kit/core"
+} from "@dnd-kit/core";
 import {
     arrayMove,
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { SortableItem } from "../../../components/SortableItem"
+} from "@dnd-kit/sortable";
+import { SortableItem } from "../../../components/SortableItem";
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 
@@ -41,21 +42,19 @@ enum ColumnType {
 }
 
 interface Column {
-    id: string
-    title: string
-    videos: Video[]
+    id: string;
+    title: string;
+    videos: Video[];
 }
 
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY
-const API_BASE_URL = "http://localhost:3000/cards";
-
+const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 const fetchVideoTitle = async (videoId: string): Promise<string | null> => {
     try {
-        const existingResponse = await fetch(`${API_BASE_URL}/${videoId}`);
+        const existingResponse = await apiRequest(`/cards/${videoId}`);
 
         if (existingResponse.status === 404) {
             console.log(`Video ${videoId} not found in database, will try YouTube API`);
-        } else if (existingResponse.ok) {
+        } else if (existingResponse.id === videoId) {
             const existingData = await existingResponse.json();
             if (existingData && existingData.title) {
                 return existingData.title;
@@ -107,12 +106,19 @@ function DroppableColumn({ id, children, className }: { id: string, children: Re
 }
 
 export default function WatchLaterPage() {
-    const [videoUrl, setVideoUrl] = useState("")
-    const [videoTitle, setVideoTitle] = useState("")
+    const [videoUrl, setVideoUrl] = useState("");
+    const [videoTitle, setVideoTitle] = useState("");
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeVideo, setActiveVideo] = useState<Video | null>(null);
     const [username, setUsername] = useState("");
     const [userImage, setUserImage] = useState<string | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteUsername, setDeleteUsername] = useState("");
+    const [deletePassword, setDeletePassword] = useState("");
+    const [deleteConfirmationCode, setDeleteConfirmationCode] = useState("");
+    const [generatedCode, setGeneratedCode] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -133,7 +139,7 @@ export default function WatchLaterPage() {
             title: "Watched",
             videos: [],
         },
-    })
+    });
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -158,7 +164,7 @@ export default function WatchLaterPage() {
             if (decoded.username) {
                 localStorage.setItem("currentUsername", decoded.username);
             }
-            
+
             const storedUserImage = localStorage.getItem(`userImage_${userId}`);
             if (storedUserImage) {
                 setUserImage(storedUserImage);
@@ -233,23 +239,41 @@ export default function WatchLaterPage() {
                 userId: userId,
             };
 
-            const response = await apiRequest(API_BASE_URL, {
+            const response = await apiRequest('/cards', {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(newVideo),
+                body: newVideo,
             });
 
-            if (response.ok) {
+            if (response.statusCode === 409) {
+                toast.dismiss(loadingToast);
+                toast.warning("Video already in your collection", {
+                    description: "This video already exists in your collection",
+                    action: {
+                        label: "View",
+                        onClick: () => {
+                            const existingStatus = response.data?.status || "WATCH_LATER";
+                            toast.info(`This video is in your ${columns[existingStatus]?.title || existingStatus} list`);
+                        }
+                    }
+                });
+
+                setVideoUrl("");
+                return;
+            }
+
+            if (!response.statusCode) {
                 fetchColumns();
                 setVideoUrl("");
+
                 toast.dismiss(loadingToast);
                 toast.success("Video added successfully", {
                     description: videoTitle || `Video ${videoId}`
                 });
             } else {
-                console.error("Failed to add video:", response.statusText);
+                console.error("Failed to add video:", response.message);
+
                 toast.dismiss(loadingToast);
-                toast.error("Failed to add video", {
+                toast.error(response.message || "Failed to add video", {
                     description: "Please try again later"
                 });
             }
@@ -266,11 +290,11 @@ export default function WatchLaterPage() {
         try {
             const loadingToast = toast.loading("Removing video...");
 
-            const response = await apiRequest(`${API_BASE_URL}/${videoId}`, {
+            const response = await apiRequest(`/cards/${videoId}`, {
                 method: "DELETE",
             });
 
-            if (response.ok) {
+            if (response.id === videoId) {
                 fetchColumns();
                 toast.dismiss(loadingToast);
                 toast.success("Video removed successfully");
@@ -293,7 +317,7 @@ export default function WatchLaterPage() {
         };
 
         try {
-            const response = await apiRequest(`${API_BASE_URL}/${videoId}`, {
+            const response = await apiRequest(`/cards/${videoId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -301,26 +325,56 @@ export default function WatchLaterPage() {
                 }),
             });
 
-            if (response.ok) {
+            if (response.id === videoId) {
                 fetchColumns();
                 toast.success(`Video moved to ${columns[newStatus].title}`, {
                     position: "bottom-right"
                 });
             } else {
-                console.error("Failed to move video:", response.statusText);
                 toast.error("Failed to move video");
+                console.log(response);
             }
         } catch (error) {
-            console.error("Failed to move video:", error);
+            console.log("Error moving video:", error);
             toast.error("Error moving video");
         }
     };
 
     const extractVideoId = (url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-        const match = url.match(regExp)
-        return match && match[2].length === 11 ? match[2] : null
-    }
+        const standardRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const standardMatch = url.match(standardRegExp);
+
+        if (standardMatch && standardMatch[2] && standardMatch[2].length === 11) {
+            return standardMatch[2];
+        }
+
+        const vParamRegExp = /[?&]v=([^#&?]*)/;
+        const vParamMatch = url.match(vParamRegExp);
+
+        if (vParamMatch && vParamMatch[1] && vParamMatch[1].length === 11) {
+            return vParamMatch[1];
+        }
+
+        try {
+            const urlObj = new URL(url);
+            if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+                const videoId = urlObj.searchParams.get('v');
+                if (videoId && videoId.length === 11) {
+                    return videoId;
+                }
+
+                if (urlObj.hostname === 'youtu.be') {
+                    const pathParts = urlObj.pathname.split('/').filter(Boolean);
+                    if (pathParts.length > 0 && pathParts[0].length === 11) {
+                        return pathParts[0];
+                    }
+                }
+            }
+        } catch (e) {
+        }
+
+        return null;
+    };
 
     const openVideo = (status: string, video: Video) => {
         if (status === "WATCH_LATER") {
@@ -330,12 +384,70 @@ export default function WatchLaterPage() {
         toast.info(`Opening ${video.title}`, {
             position: "bottom-right"
         });
-    }
+    };
 
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("currentUsername");
         router.push("/");
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteUsername !== username) {
+            toast.error("Username doesn't match");
+            return;
+        }
+
+        if (deleteConfirmationCode !== generatedCode) {
+            toast.error("Confirmation code doesn't match");
+            return;
+        }
+
+        setIsDeleting(true);
+
+        try {
+            const response = await apiRequest(`/users/${userId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    password: deletePassword
+                })
+            });
+
+            if (response.success) {
+                toast.success("Account deleted successfully");
+                localStorage.removeItem("token");
+                localStorage.removeItem("currentUsername");
+                router.push("/");
+            } else {
+                toast.error(response.message || "Failed to delete account");
+            }
+        } catch (error) {
+            console.error("Error deleting account:", error);
+            toast.error("An error occurred while deleting your account");
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteModalOpen(false);
+        }
+    };
+
+    const generateRandomCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    };
+
+    const openDeleteModal = () => {
+        const code = generateRandomCode();
+        setGeneratedCode(code);
+        setDeleteUsername("");
+        setDeletePassword("");
+        setDeleteConfirmationCode("");
+        setShowPassword(false);
+        setIsDeleteModalOpen(true);
     };
 
     const onDragStart = ({ active }: any) => {
@@ -400,7 +512,7 @@ export default function WatchLaterPage() {
             return newColumns;
         });
 
-        apiRequest(`${API_BASE_URL}/${activeId}/reorder`, {
+        apiRequest(`/cards/${activeId}/reorder`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -409,7 +521,7 @@ export default function WatchLaterPage() {
             }),
         })
             .then(response => {
-                if (response.ok) {
+                if (response.id === activeId) {
                     toast.success(`Video moved to ${columns[destinationStatus].title}`);
                 } else {
                     toast.error("Failed to move video");
@@ -452,7 +564,7 @@ export default function WatchLaterPage() {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
-                <div>                    
+                <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center">
                         <Youtube className="h-8 w-8 mr-3 text-red-500" />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
@@ -465,9 +577,9 @@ export default function WatchLaterPage() {
                     <div className="relative group">
                         <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
                             {userImage ? (
-                                <img 
-                                    src={userImage} 
-                                    alt={username} 
+                                <img
+                                    src={userImage}
+                                    alt={username}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
@@ -490,6 +602,13 @@ export default function WatchLaterPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                         </svg>
                         Sign out
+                    </button>
+                    <button
+                        onClick={openDeleteModal}
+                        className="text-white/70 hover:text-red-400 transition-colors flex items-center gap-1.5 text-sm"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        Delete Account
                     </button>
                 </div>
             </div>
@@ -601,7 +720,10 @@ export default function WatchLaterPage() {
                     })}
                 </div>
 
-                <DragOverlay adjustScale={true} zIndex={9999}>
+                <DragOverlay
+                    adjustScale={false}
+                    zIndex={9999}
+                >
                     {activeId && activeVideo ? (
                         <div className="w-full" style={{ maxWidth: "300px" }}>
                             <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-md">
@@ -623,6 +745,119 @@ export default function WatchLaterPage() {
                     ) : null}
                 </DragOverlay>
             </DndContext>
+
+            <Dialog
+                open={isDeleteModalOpen}
+                onClose={() => !isDeleting && setIsDeleteModalOpen(false)}
+                className="relative z-50"
+            >
+                <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl p-6 backdrop-blur-sm">
+                        <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
+                            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                            Delete Account
+                        </Dialog.Title>
+
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+                            <p className="text-white/90 text-sm">
+                                This action <span className="font-bold text-red-400">cannot be undone</span>.
+                                All your data, including your videos and preferences will be permanently deleted.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-white/70 mb-1">
+                                    Confirm your username
+                                </label>
+                                <input
+                                    type="text"
+                                    value={deleteUsername}
+                                    onChange={(e) => setDeleteUsername(e.target.value)}
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                                    placeholder="Enter your username"
+                                    disabled={isDeleting}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-white/70 mb-1">
+                                    Confirm your password
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={deletePassword}
+                                        onChange={(e) => setDeletePassword(e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40 pr-10"
+                                        placeholder="Enter your password"
+                                        disabled={isDeleting}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                                    >
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-white/70 mb-1">
+                                    Security verification
+                                </label>
+                                <div className="mb-2 p-3 bg-white/10 border border-white/5 rounded font-mono text-sm text-white tracking-wider">
+                                    {generatedCode}
+                                </div>
+                                <input
+                                    type="text"
+                                    value={deleteConfirmationCode}
+                                    onChange={(e) => setDeleteConfirmationCode(e.target.value)}
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                                    placeholder="Type the code exactly as shown above"
+                                    disabled={isDeleting}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex justify-between">
+                            <button
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                className="px-4 py-2 text-white/70 hover:text-white transition-colors"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleDeleteAccount}
+                                className={`px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-colors ${
+                                    isDeleting ? 'opacity-70 cursor-not-allowed' : ''
+                                }`}
+                                disabled={isDeleting || !deleteUsername || !deletePassword || !deleteConfirmationCode}
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Forever
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
         </div>
     );
 }
