@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ColumnType, Prisma } from '@prisma/client';
 
@@ -8,12 +8,16 @@ export class CardService {
 
     async create(data: any) {
         const status = data.status || data.columnId || 'WATCH_LATER';
-
         const { columnId, ...cleanData } = data;
+
+        if (!cleanData.userId) {
+            throw new Error('userId is required');
+        }
 
         const cardsWithSameStatus = await this.prisma.card.count({
             where: {
                 status: status as ColumnType,
+                userId: cleanData.userId,
             },
         });
 
@@ -40,6 +44,7 @@ export class CardService {
                 await prisma.card.updateMany({
                     where: {
                         status: card.status,
+                        userId: card.userId,
                         order: {
                             gt: card.order
                         }
@@ -54,6 +59,7 @@ export class CardService {
                 await prisma.card.updateMany({
                     where: {
                         status: newStatus,
+                        userId: card.userId,
                         order: {
                             gte: newOrder
                         }
@@ -69,6 +75,7 @@ export class CardService {
                     await prisma.card.updateMany({
                         where: {
                             status: card.status,
+                            userId: card.userId,
                             order: {
                                 gt: card.order,
                                 lte: newOrder
@@ -84,6 +91,7 @@ export class CardService {
                     await prisma.card.updateMany({
                         where: {
                             status: card.status,
+                            userId: card.userId,
                             order: {
                                 gte: newOrder,
                                 lt: card.order
@@ -108,8 +116,9 @@ export class CardService {
         });
     }
 
-    async findAll() {
+    async findAllByUser(userId: string) {
         return this.prisma.card.findMany({
+            where: { userId },
             orderBy: {
                 order: 'asc'
             }

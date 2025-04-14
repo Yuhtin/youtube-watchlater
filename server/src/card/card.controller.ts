@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query } from '@nestjs/common';
 import { CardService } from './card.service';
 import { ColumnType } from '@prisma/client';
 
@@ -12,8 +12,11 @@ export class CardController {
     }
 
     @Get()
-    findAll() {
-        return this.cardService.findAll();
+    findAll(@Query('userId') userId: string) {
+        if (!userId) {
+            return { statusCode: 400, message: 'userId query parameter is required' };
+        }
+        return this.cardService.findAllByUser(userId);
     }
 
     @Get(':id')
@@ -21,7 +24,7 @@ export class CardController {
         const card = await this.cardService.findOne(id);
 
         if (!card) {
-            return { statusCode: 200, message: `Card with ID ${id} not found` };
+            return { statusCode: 404, message: `Card with ID ${id} not found` };
         }
 
         return card;
@@ -60,6 +63,7 @@ export class CardController {
             if (error.message === 'Card not found') {
                 throw new NotFoundException(`Card with ID ${id} not found`);
             }
+
             throw error;
         }
     }
