@@ -10,9 +10,7 @@ export const metadata: Metadata = {
   title: "YouTube Watch Later Kanban",
   description: "Manage your YouTube watch later videos in a Kanban board",
   icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: '256x256' },
-    ],
+    icon: '/favicon.ico',  
   },
 }
 
@@ -23,6 +21,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
