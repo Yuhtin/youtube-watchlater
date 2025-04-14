@@ -34,7 +34,7 @@ export default function LoginPage() {
 
     const fetchUserDetails = async () => {
         try {
-            const response = await fetch(`http://localhost:3000/users/${userId}`);
+            const response = await fetch(`${process.env.API_BASE_URL}/users/${userId}`);
             if (response.ok) {
                 const data = await response.json();
 
@@ -48,7 +48,7 @@ export default function LoginPage() {
                 if (data._count && data._count.cards !== undefined) {
                     setVideoCount(data._count.cards);
                 } else {
-                    const cardsResponse = await fetch(`http://localhost:3000/cards/count/${userId}`);
+                    const cardsResponse = await fetch(`${process.env.API_BASE_URL}/cards/count/${userId}`);
                     if (cardsResponse.ok) {
                         const countData = await cardsResponse.json();
                         setVideoCount(countData.count || 0);
@@ -71,7 +71,7 @@ export default function LoginPage() {
         try {
             setIsLoading(true);
 
-            const response = await fetch("http://localhost:3000/auth/login", {
+            const response = await fetch(`${process.env.API_BASE_URL}/auth/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
