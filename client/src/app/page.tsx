@@ -26,12 +26,12 @@ export default function HomePage() {
 
     useEffect(() => {
         fetchUsers();
-        
+
         const handleMouseMove = (e: MouseEvent) => {
             const bgElements = document.querySelectorAll('.parallax-bg');
             const x = e.clientX / window.innerWidth;
             const y = e.clientY / window.innerHeight;
-            
+
             bgElements.forEach(el => {
                 const element = el as HTMLElement;
                 const speed = parseFloat(element.getAttribute('data-speed') || '0.05');
@@ -40,7 +40,7 @@ export default function HomePage() {
                 element.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
             });
         };
-        
+
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
@@ -137,16 +137,16 @@ export default function HomePage() {
             "from-pink-400 to-rose-600",
             "from-violet-400 to-purple-600",
         ];
-        
+
         let hash = 0;
         for (let i = 0; i < username.length; i++) {
             hash += username.charCodeAt(i);
         }
-        
+
         return colors[hash % colors.length];
     };
-    
-    const filteredUsers = users.filter(user => 
+
+    const filteredUsers = users.filter(user =>
         user.username.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -158,7 +158,7 @@ export default function HomePage() {
                 <div className="parallax-bg absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl" data-speed="0.05"></div>
                 <div className="parallax-bg absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 blur-3xl" data-speed="0.04"></div>
             </div>
-            
+
             {/* Content container with glassy effect */}
             <div className="relative z-10 max-w-7xl mx-auto">
                 <Toaster
@@ -193,7 +193,7 @@ export default function HomePage() {
                                 </p>
                             </div>
                         </div>
-                        
+
                         {/* Search input */}
                         <div className="mt-4 md:mt-0 w-full md:w-auto">
                             <div className="relative">
@@ -264,9 +264,9 @@ export default function HomePage() {
                                 >
                                     {/* Animated border on hover */}
                                     <div className="absolute inset-0 rounded-2xl z-0 overflow-hidden opacity-0 group-hover:opacity-100">
-                                        <div 
+                                        <div
                                             className="absolute inset-0 z-10 rounded-2xl pointer-events-none animate-border-flow"
-                                            style={{ 
+                                            style={{
                                                 background: "linear-gradient(90deg, rgba(56, 189, 248, 0.8), rgba(236, 72, 153, 0.8)), linear-gradient(90deg, rgba(99, 102, 241, 0.8), rgba(236, 72, 153, 0.8))",
                                                 backgroundSize: "300% 300%, 300% 300%",
                                                 backgroundPosition: "0% 0%, 100% 0%",
@@ -278,7 +278,7 @@ export default function HomePage() {
                                             }}
                                         ></div>
                                     </div>
-                                    
+
                                     <div className={`relative z-10 h-32 bg-gradient-to-r ${getRandomColor(user.username)} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`}>
                                         {user.imageUrl ? (
                                             <Image
@@ -297,9 +297,17 @@ export default function HomePage() {
                                     <div className="relative z-10 p-5">
                                         <h3 className="text-white text-lg font-medium mb-1 flex items-center">
                                             {user.username}
-                                            {user._count.cards > 10 && (
-                                                <span className="ml-2 inline-flex items-center bg-amber-500/20 text-amber-300 text-xs px-2 py-1 rounded-full">
-                                                    <Sparkles className="w-3 h-3 mr-1" /> Active
+                                            {user._count.cards > 15 && (
+                                                <span className="ml-2 inline-flex items-center bg-gradient-to-r from-orange-500/30 to-red-600/30 text-orange-300 text-xs px-2 py-0.5 rounded-full border border-orange-500/20 shadow-inner">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        className="w-3 h-3 mr-1 animate-pulse"
+                                                    >
+                                                        <path fillRule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071-.136 9.742 9.742 0 00-3.539 6.177A7.547 7.547 0 016.648 6.61a.75.75 0 00-1.152.082A9 9 0 1015.68 4.534a7.46 7.46 0 01-2.717-2.248zM15.75 14.25a3.75 3.75 0 11-7.313-1.172c.628.465 1.35.81 2.133 1a5.99 5.99 0 011.925-3.545 3.75 3.75 0 013.255 3.717z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Hot
                                                 </span>
                                             )}
                                         </h3>
@@ -313,7 +321,7 @@ export default function HomePage() {
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Shine effect overlay */}
                                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-1000">
                                         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1500"></div>
@@ -324,7 +332,7 @@ export default function HomePage() {
                     )}
                 </div>
             </div>
-            
+
             {/* Floating action button with animation */}
             <button
                 onClick={() => setIsModalOpen(true)}

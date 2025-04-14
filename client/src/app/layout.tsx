@@ -8,7 +8,12 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "YouTube Watch Later Kanban",
-  description: "Manage your YouTube watch later videos in a Kanban board"
+  description: "Manage your YouTube watch later videos in a Kanban board",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '256x256' },
+    ],
+  },
 }
 
 export default function RootLayout({
@@ -26,6 +31,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-import './globals.css'
