@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Card {
+  id           String     @id @default(uuid())
+  title        String
+  thumbnailUrl String
+  url          String
+  status       ColumnType
+  description  String?
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum ColumnType {
+  WATCH_LATER
+  WATCHING
+  WATCHED
+}
