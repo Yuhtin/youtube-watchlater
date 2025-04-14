@@ -1,6 +1,12 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+html, body {
+  background: linear-gradient(to bottom right, #1e293b, #0f172a);
+  background-attachment: fixed;
+  min-height: 100%;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
 }

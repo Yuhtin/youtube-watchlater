@@ -1,21 +1,27 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, NotFoundException, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, NotFoundException } from '@nestjs/common';
 import { CardService } from './card.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ColumnType } from '@prisma/client';
 
 @Controller('cards')
+@UseGuards(JwtAuthGuard)
 export class CardController {
     constructor(private readonly cardService: CardService) { }
 
     @Post()
-    create(@Body() body: any) {
-        return this.cardService.create(body);
+    create(@Body() body: any, @Request() req) {
+        return this.cardService.create({
+            ...body,
+            userId: req.user.userId,
+        });
     }
 
     @Get()
-    findAll(@Query('userId') userId: string) {
-        if (!userId) {
-            return { statusCode: 400, message: 'userId query parameter is required' };
+    findAll(@Query('userId') userId: string, @Request() req) {
+        if (userId !== req.user.userId) {
+            return { statusCode: 403, message: 'Unauthorized access to other user data' };
         }
+
         return this.cardService.findAllByUser(userId);
     }
 

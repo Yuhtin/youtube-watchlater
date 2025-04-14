@@ -21,6 +21,8 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { SortableItem } from "../../../components/SortableItem"
+import { apiRequest } from '@/src/auth/utility';
+import { jwtDecode } from "jwt-decode";
 
 interface Video {
     id: string;
@@ -110,6 +112,7 @@ export default function WatchLaterPage() {
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeVideo, setActiveVideo] = useState<Video | null>(null);
     const [username, setUsername] = useState("");
+    const [userImage, setUserImage] = useState<string | null>(null);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -133,32 +136,45 @@ export default function WatchLaterPage() {
     })
 
     useEffect(() => {
-        const currentUserId = localStorage.getItem("currentUserId");
-        const currentUsername = localStorage.getItem("currentUsername");
+        const token = localStorage.getItem("token");
 
-        if (!currentUserId || currentUserId !== userId) {
+        if (!token) {
             router.push(`/login/${userId}`);
             return;
         }
 
-        if (currentUsername) {
-            setUsername(currentUsername);
-        }
+        try {
+            const decoded: any = jwtDecode(token);
 
-        fetchColumns();
+            if (decoded.sub !== userId || decoded.exp < Date.now() / 1000) {
+                console.log('Token expired or belongs to different user');
+                localStorage.removeItem("token");
+                router.push(`/login/${userId}`);
+                return;
+            }
+
+            setUsername(decoded.username || "");
+
+            if (decoded.username) {
+                localStorage.setItem("currentUsername", decoded.username);
+            }
+            
+            const storedUserImage = localStorage.getItem(`userImage_${userId}`);
+            if (storedUserImage) {
+                setUserImage(storedUserImage);
+            }
+
+            fetchColumns();
+        } catch (error) {
+            console.error('Invalid token:', error);
+            localStorage.removeItem("token");
+            router.push(`/login/${userId}`);
+        }
     }, [userId, router]);
 
     const fetchColumns = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}?userId=${userId}`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                toast.error("Failed to load videos", {
-                    description: "Check your connection and try again"
-                });
-                return;
-            }
+            const data = await apiRequest(`/cards?userId=${userId}`);
 
             const columnsFromServer: { [key in ColumnType]: Column } = {
                 WATCH_LATER: { id: ColumnType.WATCH_LATER, title: "Watch Later", videos: [] },
@@ -217,7 +233,7 @@ export default function WatchLaterPage() {
                 userId: userId,
             };
 
-            const response = await fetch(API_BASE_URL, {
+            const response = await apiRequest(API_BASE_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newVideo),
@@ -250,7 +266,7 @@ export default function WatchLaterPage() {
         try {
             const loadingToast = toast.loading("Removing video...");
 
-            const response = await fetch(`${API_BASE_URL}/${videoId}`, {
+            const response = await apiRequest(`${API_BASE_URL}/${videoId}`, {
                 method: "DELETE",
             });
 
@@ -277,7 +293,7 @@ export default function WatchLaterPage() {
         };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/${videoId}`, {
+            const response = await apiRequest(`${API_BASE_URL}/${videoId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -317,7 +333,7 @@ export default function WatchLaterPage() {
     }
 
     const logout = () => {
-        localStorage.removeItem("currentUserId");
+        localStorage.removeItem("token");
         localStorage.removeItem("currentUsername");
         router.push("/");
     };
@@ -384,7 +400,7 @@ export default function WatchLaterPage() {
             return newColumns;
         });
 
-        fetch(`${API_BASE_URL}/${activeId}/reorder`, {
+        apiRequest(`${API_BASE_URL}/${activeId}/reorder`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -420,7 +436,7 @@ export default function WatchLaterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 p-6 md:p-10">
+        <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 p-6 md:p-10 bg-fixed">
             <Toaster
                 position="top-center"
                 expand={false}
@@ -435,14 +451,8 @@ export default function WatchLaterPage() {
                 }}
             />
 
-            <div className="flex flex-col md:flex-row justify-between items-center mb-10">
-                <div>
-                    <button
-                        onClick={() => router.push('/')}
-                        className="text-white/70 hover:text-white mb-4 flex items-center"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-1" /> Back to collections
-                    </button>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+                <div>                    
                     <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center">
                         <Youtube className="h-8 w-8 mr-3 text-red-500" />
                         <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
@@ -451,12 +461,37 @@ export default function WatchLaterPage() {
                     </h1>
                 </div>
 
-                <button
-                    onClick={logout}
-                    className="text-white/70 hover:text-white"
-                >
-                    Sign out
-                </button>
+                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                    <div className="relative group">
+                        <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+                            {userImage ? (
+                                <img 
+                                    src={userImage} 
+                                    alt={username} 
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="text-white/70 text-sm font-semibold">
+                                    {username?.charAt(0)?.toUpperCase() || "U"}
+                                </div>
+                            )}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100" onClick={logout}>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3 h-3 text-white">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </div>
+                    </div>
+                    <button
+                        onClick={logout}
+                        className="text-white/70 hover:text-red-400 transition-colors flex items-center gap-1.5 text-sm"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                        </svg>
+                        Sign out
+                    </button>
+                </div>
             </div>
 
             <div className="mb-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-xl overflow-hidden">

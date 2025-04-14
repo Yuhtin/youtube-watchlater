@@ -60,7 +60,7 @@ export default function LoginPage() {
         try {
             setIsLoading(true);
 
-            const response = await fetch("http://localhost:3000/users/login", {
+            const response = await fetch("http://localhost:3000/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -72,16 +72,16 @@ export default function LoginPage() {
             });
 
             if (response.ok) {
-                const user = await response.json();
-
-                localStorage.setItem("currentUserId", user.id);
-                localStorage.setItem("currentUsername", user.username);
-                if (user.imageUrl) {
-                    localStorage.setItem(`userImage_${userId}`, user.imageUrl);
+                const data = await response.json();
+                
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("currentUsername", data.user.username);
+                if (data.user.imageUrl) {
+                    localStorage.setItem(`userImage_${data.user.id}`, data.user.imageUrl);
                 }
 
                 toast.success("Login successful");
-                router.push(`/watchlater/${user.id}`);
+                router.push(`/watchlater/${data.user.id}`);
             } else {
                 toast.error("Invalid credentials");
             }
