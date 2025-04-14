@@ -1,6 +1,9 @@
+"use client";
+
 import { useState, useEffect } from "react"
-import { Plus, X, Youtube } from "lucide-react"
+import { Plus, X, Youtube, ArrowLeft } from "lucide-react"
 import { toast, Toaster } from "sonner"
+import { useRouter, useParams } from "next/navigation"
 import {
     DndContext,
     closestCenter,
@@ -17,7 +20,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { SortableItem } from "./SortableItem"
+import { SortableItem } from "../../../components/SortableItem"
 
 interface Video {
     id: string;
@@ -101,11 +104,15 @@ function DroppableColumn({ id, children, className }: { id: string, children: Re
     );
 }
 
-export default function Home() {
+export default function WatchLaterPage() {
     const [videoUrl, setVideoUrl] = useState("")
     const [videoTitle, setVideoTitle] = useState("")
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeVideo, setActiveVideo] = useState<Video | null>(null);
+    const [username, setUsername] = useState("");
+    const router = useRouter();
+    const params = useParams();
+    const userId = params.userId as string;
 
     const [columns, setColumns] = useState<{ [key: string]: Column }>({
         WATCH_LATER: {
@@ -125,10 +132,34 @@ export default function Home() {
         },
     })
 
+    useEffect(() => {
+        const currentUserId = localStorage.getItem("currentUserId");
+        const currentUsername = localStorage.getItem("currentUsername");
+
+        if (!currentUserId || currentUserId !== userId) {
+            router.push(`/login/${userId}`);
+            return;
+        }
+
+        if (currentUsername) {
+            setUsername(currentUsername);
+        }
+
+        fetchColumns();
+    }, [userId, router]);
+
     const fetchColumns = async () => {
         try {
-            const response = await fetch(API_BASE_URL);
+            const response = await fetch(`${API_BASE_URL}?userId=${userId}`);
             const data = await response.json();
+
+            if (!response.ok) {
+                toast.error("Failed to load videos", {
+                    description: "Check your connection and try again"
+                });
+                return;
+            }
+
             const columnsFromServer: { [key in ColumnType]: Column } = {
                 WATCH_LATER: { id: ColumnType.WATCH_LATER, title: "Watch Later", videos: [] },
                 WATCHING: { id: ColumnType.WATCHING, title: "Watching", videos: [] },
@@ -183,6 +214,7 @@ export default function Home() {
                 thumbnailUrl: `https://img.youtube.com/vi/${videoId}/0.jpg`,
                 url: `https://www.youtube.com/watch?v=${videoId}`,
                 status: "WATCH_LATER",
+                userId: userId,
             };
 
             const response = await fetch(API_BASE_URL, {
@@ -268,10 +300,6 @@ export default function Home() {
         }
     };
 
-    useEffect(() => {
-        fetchColumns();
-    }, []);
-
     const extractVideoId = (url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
         const match = url.match(regExp)
@@ -287,6 +315,12 @@ export default function Home() {
             position: "bottom-right"
         });
     }
+
+    const logout = () => {
+        localStorage.removeItem("currentUserId");
+        localStorage.removeItem("currentUsername");
+        router.push("/");
+    };
 
     const onDragStart = ({ active }: any) => {
         setActiveId(active.id);
@@ -350,10 +384,13 @@ export default function Home() {
             return newColumns;
         });
 
-        fetch(`${API_BASE_URL}/${activeId}`, {
+        fetch(`${API_BASE_URL}/${activeId}/reorder`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: destinationStatus }),
+            body: JSON.stringify({
+                status: destinationStatus,
+                order: columns[destinationStatus].videos.length
+            }),
         })
             .then(response => {
                 if (response.ok) {
@@ -366,15 +403,9 @@ export default function Home() {
             .catch(error => {
                 console.error('Failed to update card:', error);
                 toast.error('Failed to move video');
-
                 fetchColumns();
             });
     };
-
-    const formatDate = (timestamp?: number) => {
-        if (!timestamp) return "N/A"
-        return new Date(timestamp).toLocaleString()
-    }
 
     const columnColors = {
         WATCH_LATER: "from-blue-400/20 to-blue-500/10 border-blue-300/30",
@@ -405,12 +436,27 @@ export default function Home() {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-center mb-10">
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0 flex items-center">
-                    <Youtube className="h-8 w-8 mr-3 text-red-500" />
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
-                        Davi Duarte's YouTube Watch Later
-                    </span>
-                </h1>
+                <div>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="text-white/70 hover:text-white mb-4 flex items-center"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Back to collections
+                    </button>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center">
+                        <Youtube className="h-8 w-8 mr-3 text-red-500" />
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
+                            {username}'s Watch Later
+                        </span>
+                    </h1>
+                </div>
+
+                <button
+                    onClick={logout}
+                    className="text-white/70 hover:text-white"
+                >
+                    Sign out
+                </button>
             </div>
 
             <div className="mb-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-xl overflow-hidden">
