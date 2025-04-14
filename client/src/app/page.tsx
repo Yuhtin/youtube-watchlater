@@ -94,7 +94,7 @@ export default function HomePage() {
     const fetchUsers = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`${process.env.API_BASE_URL}/users`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users`);
             if (response.ok) {
                 const data = await response.json();
                 setUsers(data);

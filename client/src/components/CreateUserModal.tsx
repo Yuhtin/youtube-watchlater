@@ -39,7 +39,7 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUs
             setIsLoading(true);
             const loadingToast = toast.loading("Creating collection...");
 
-            const response = await fetch(`${process.env.API_BASE_URL}/users`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
