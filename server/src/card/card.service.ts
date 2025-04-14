@@ -136,4 +136,12 @@ export class CardService {
     async remove(id: string) {
         return this.prisma.card.delete({ where: { id } });
     }
+
+    async countCardsByUser(userId: string): Promise<number> {
+        return this.prisma.card.count({
+            where: {
+                userId,
+            },
+        });
+    }
 }

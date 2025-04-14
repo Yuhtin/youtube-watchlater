@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
-import { ArrowLeft, User, Lock, LogIn } from "lucide-react";
+import { ArrowLeft, User, Lock, LogIn, Film } from "lucide-react";
 import Image from "next/image";
 
 export default function LoginPage() {
@@ -11,20 +11,21 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [username, setUsername] = useState("");
     const [userImage, setUserImage] = useState<string | null>(null);
+    const [videoCount, setVideoCount] = useState<number>(0);
     const params = useParams();
     const router = useRouter();
     const userId = params.userId as string;
 
     useEffect(() => {
         fetchUserDetails();
-        
+
         const storedUsername = localStorage.getItem("currentWatchlaterUsername");
         const storedUserImage = localStorage.getItem(`userImage_${userId}`);
 
         if (storedUsername) {
             setUsername(storedUsername);
         }
-        
+
         if (storedUserImage) {
             setUserImage(storedUserImage);
         }
@@ -42,6 +43,16 @@ export default function LoginPage() {
                 if (data.imageUrl) {
                     setUserImage(data.imageUrl);
                     localStorage.setItem(`userImage_${userId}`, data.imageUrl);
+                }
+                
+                if (data._count && data._count.cards !== undefined) {
+                    setVideoCount(data._count.cards);
+                } else {
+                    const cardsResponse = await fetch(`http://localhost:3000/cards/count/${userId}`);
+                    if (cardsResponse.ok) {
+                        const countData = await cardsResponse.json();
+                        setVideoCount(countData.count || 0);
+                    }
                 }
             }
         } catch (error) {
@@ -73,7 +84,7 @@ export default function LoginPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                
+
                 localStorage.setItem("token", data.access_token);
                 localStorage.setItem("currentUsername", data.user.username);
                 if (data.user.imageUrl) {
@@ -101,7 +112,7 @@ export default function LoginPage() {
                 <div className="absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl"></div>
                 <div className="absolute -bottom-20 left-1/3 w-72 h-72 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 blur-3xl"></div>
             </div>
-            
+
             <Toaster
                 position="top-center"
                 expand={false}
@@ -119,9 +130,9 @@ export default function LoginPage() {
             <div className="relative z-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all duration-300 hover:shadow-blue-500/10">
                 {/* Animated border effect */}
                 <div className="absolute inset-0 rounded-2xl z-0 overflow-hidden opacity-0 group-hover:opacity-100">
-                    <div 
+                    <div
                         className="absolute inset-0 z-10 rounded-2xl pointer-events-none"
-                        style={{ 
+                        style={{
                             background: "linear-gradient(90deg, rgba(56, 189, 248, 0.4), rgba(236, 72, 153, 0.4))",
                             backgroundSize: "300% 300%",
                             backgroundPosition: "0% 0%",
@@ -133,13 +144,13 @@ export default function LoginPage() {
                         }}
                     ></div>
                 </div>
-                
+
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-8 relative">
                     <button
                         onClick={() => router.push('/')}
                         className="text-white/80 hover:text-white mb-8 flex items-center group transition-all"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" /> 
+                        <ArrowLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
                         <span>Back to collections</span>
                     </button>
 
@@ -161,7 +172,10 @@ export default function LoginPage() {
                         )}
                         <h2 className="text-white text-2xl font-bold">{username}</h2>
                         <div className="mt-2 px-3 py-1 bg-white/10 rounded-full text-white/70 text-sm">
-                            Amazing subtitle, i need to think what to add here
+                            <p className="text-white/70 text-sm flex items-center justify-center">
+                                <Film className="w-3.5 h-3.5 mr-1.5" />
+                                {videoCount} {videoCount === 1 ? 'video' : 'videos'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -210,7 +224,7 @@ export default function LoginPage() {
                     </form>
                 </div>
             </div>
-            
+
             {/* Add animation keyframes for border flow */}
             <style jsx global>{`
                 @keyframes border-flow {

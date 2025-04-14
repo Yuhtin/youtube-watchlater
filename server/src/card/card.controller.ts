@@ -4,10 +4,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ColumnType } from '@prisma/client';
 
 @Controller('cards')
-@UseGuards(JwtAuthGuard)
 export class CardController {
     constructor(private readonly cardService: CardService) { }
 
+    @Get('count/:userId')
+    async getPublicCardCount(@Param('userId') userId: string) {
+        const count = await this.cardService.countCardsByUser(userId);
+        return { count };
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post()
     create(@Body() body: any, @Request() req) {
         return this.cardService.create({
@@ -16,6 +22,7 @@ export class CardController {
         });
     }
 
+    @UseGuards(JwtAuthGuard)
     @Get()
     findAll(@Query('userId') userId: string, @Request() req) {
         if (userId !== req.user.userId) {
@@ -25,6 +32,7 @@ export class CardController {
         return this.cardService.findAllByUser(userId);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Get(':id')
     async findOne(@Param('id') id: string) {
         const card = await this.cardService.findOne(id);
@@ -36,6 +44,7 @@ export class CardController {
         return card;
     }
 
+    @UseGuards(JwtAuthGuard)
     @Patch(':id')
     async update(@Param('id') id: string, @Body() body: any) {
         const card = await this.cardService.findOne(id);
@@ -47,6 +56,7 @@ export class CardController {
         return this.cardService.update(id, body);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Delete(':id')
     async remove(@Param('id') id: string) {
         const card = await this.cardService.findOne(id);
@@ -58,6 +68,7 @@ export class CardController {
         return this.cardService.remove(id);
     }
 
+    @UseGuards(JwtAuthGuard)
     @Patch(':id/reorder')
     async reorderCard(
         @Param('id') id: string,
