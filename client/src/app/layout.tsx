@@ -9,16 +9,10 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "YouTube Watch Later Kanban",
   description: "Manage your YouTube watch later videos in a Kanban board",
+  // Simpler configuration for production environments
   icons: {
-    icon: '/favicon.ico',  
-    shortcut: '/favicon.ico',
-    apple: '/favicon.ico', 
-    other: [
-      {
-        rel: 'icon',
-        type: 'image/x-icon',
-        url: '/favicon.ico',
-      },
+    icon: [
+      { url: './favicon.ico' },
     ],
   },
 }
@@ -31,8 +25,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href="./favicon.ico" />
+        <link rel="shortcut icon" href="./favicon.ico" />
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
