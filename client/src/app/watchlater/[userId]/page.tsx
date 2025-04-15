@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Eye, EyeOff, List } from "lucide-react";
+import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
@@ -24,6 +24,7 @@ import {
 import { SortableItem } from "../../../components/SortableItem";
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
+import { fail } from "assert";
 
 interface Video {
     id: string;
@@ -33,6 +34,24 @@ interface Video {
     addedAt: number;
     status: string;
     updatedAt?: number;
+    playlistId?: string;
+    isPlaylist?: boolean;
+}
+
+// Updated interface for cards that can be either videos or playlists
+interface Card {
+    id: string;
+    title: string;
+    thumbnailUrl: string;
+    url: string;
+    addedAt: number;
+    status: string;
+    updatedAt?: number;
+    isPlaylist?: boolean;
+    playlistId?: string;
+    _count?: {
+        cards?: number
+    };
 }
 
 enum ColumnType {
@@ -105,6 +124,38 @@ function DroppableColumn({ id, children, className }: { id: string, children: Re
     );
 }
 
+function getPlaylistStatusText(playlist: { cards: { filter: (arg0: { (card: any): boolean; (card: any): boolean; }) => { (): any; new(): any; length: number; }; length: number; }; }) {
+    // Calculate status based on cards
+    const watchedCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHED').length || 0;
+    const watchingCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHING').length || 0;
+    const totalCount = playlist.cards?.length || 0;
+
+    if (totalCount === 0) {
+        return 'No videos';
+    }
+
+    if (watchedCount === totalCount) {
+        return 'Watched';
+    }
+
+    if (watchingCount > 0 || watchedCount > 0) {
+        return 'Watching';
+    }
+
+    return 'Watch Later';
+}
+
+const getPlaylistStatus = (playlist: any) => {
+    const watchedCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHED').length || 0;
+    const watchingCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHING').length || 0;
+    const totalCount = playlist.cards?.length || 0;
+
+    if (totalCount === 0) return 'WATCH_LATER';
+    if (watchedCount === totalCount) return 'WATCHED';
+    if (watchingCount > 0 || watchedCount > 0) return 'WATCHING';
+    return 'WATCH_LATER';
+};
+
 export default function WatchLaterPage() {
     const [videoUrl, setVideoUrl] = useState("");
     const [videoTitle, setVideoTitle] = useState("");
@@ -128,6 +179,11 @@ export default function WatchLaterPage() {
         duplicates: 0
     });
     const [showResults, setShowResults] = useState(false);
+    const [playlists, setPlaylists] = useState<any[]>([]);
+    const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
+    const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+    const [playlistUrl, setPlaylistUrl] = useState('');
+    const [isAddingPlaylist, setIsAddingPlaylist] = useState(false);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -180,12 +236,37 @@ export default function WatchLaterPage() {
             }
 
             fetchColumns();
+            fetchPlaylists();
         } catch (error) {
             console.error('Invalid token:', error);
             localStorage.removeItem("token");
             router.push(`/login/${userId}`);
         }
     }, [userId, router]);
+
+    const removePlaylist = async (playlistId: string) => {
+        try {
+            const loadingToast = toast.loading("Removing playlist...");
+
+            const response = await apiRequest(`/playlists/${playlistId}`, {
+                method: "DELETE",
+            });
+
+            if (response.success) {
+                fetchColumns();
+                fetchPlaylists();
+                toast.dismiss(loadingToast);
+                toast.success("Playlist removed successfully");
+            } else {
+                console.error("Failed to remove playlist:", response.message);
+                toast.dismiss(loadingToast);
+                toast.error("Failed to remove playlist");
+            }
+        } catch (error) {
+            console.error("Failed to remove playlist:", error);
+            toast.error("Error removing playlist");
+        }
+    };
 
     const fetchColumns = async () => {
         try {
@@ -220,30 +301,86 @@ export default function WatchLaterPage() {
         }
     };
 
+    const fetchPlaylists = async () => {
+        try {
+            const response = await apiRequest('/playlists');
+            if (response) {
+                setPlaylists(response);
+
+                const playlistCards = response.map((playlist: { id: any; title: any; thumbnailUrl: any; createdAt: string | number | Date; _count: any; }) => ({
+                    id: `playlist-${playlist.id}`,
+                    title: playlist.title,
+                    thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
+                    url: `https://www.youtube.com/playlist?list=${playlist.id}`,
+                    status: getPlaylistStatus(playlist),
+                    addedAt: new Date(playlist.createdAt).getTime(),
+                    isPlaylist: true,
+                    playlistData: playlist,
+                    _count: playlist._count
+                }));
+
+                setColumns(prev => {
+                    const newColumns = { ...prev };
+
+                    playlistCards.forEach((card: Video) => {
+                        const columnKey = card.status;
+                        if (newColumns[columnKey]) {
+                            newColumns[columnKey].videos = [
+                                ...newColumns[columnKey].videos.filter(v => v.id !== card.id),
+                                card
+                            ];
+                        }
+                    });
+
+                    return newColumns;
+                });
+            }
+        } catch (error) {
+            console.error("Failed to fetch playlists:", error);
+        }
+    };
+
     const addVideo = async () => {
         if (!videoUrl.trim()) {
             toast.warning("Please enter a YouTube URL");
             return;
         }
 
-        const videoId = extractVideoId(videoUrl);
-        if (!videoId) {
+        const { id, isPlaylist } = extractVideoId(videoUrl);
+
+        if (!id) {
             toast.error("Invalid YouTube URL", {
-                description: "Please enter a valid YouTube video URL"
+                description: "Please enter a valid YouTube video or playlist URL"
             });
+            return;
+        }
+
+        if (isPlaylist) {
+            const playlistId = id.replace('playlist-', '');
+            const existingPlaylist = playlists.find(p => p.id === playlistId);
+            if (existingPlaylist) {
+                toast.warning("Playlist already exists in your collection", {
+                    description: "This playlist is already in your collection"
+                });
+                setVideoUrl("");
+                return;
+            }
+
+            console.log(playlistId)
+            addPlaylist(playlistId);
             return;
         }
 
         const loadingToast = toast.loading("Adding video...");
 
         try {
-            const videoTitle = await fetchVideoTitle(videoId);
+            const videoTitle = await fetchVideoTitle(id);
 
             const newVideo = {
-                id: videoId,
-                title: videoTitle || `Video ${videoId}`,
-                thumbnailUrl: `https://img.youtube.com/vi/${videoId}/0.jpg`,
-                url: `https://www.youtube.com/watch?v=${videoId}`,
+                id,
+                title: videoTitle || `Video ${id}`,
+                thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
+                url: `https://www.youtube.com/watch?v=${id}`,
                 status: "WATCH_LATER",
                 userId: userId,
             };
@@ -276,7 +413,7 @@ export default function WatchLaterPage() {
 
                 toast.dismiss(loadingToast);
                 toast.success("Video added successfully", {
-                    description: videoTitle || `Video ${videoId}`
+                    description: videoTitle || `Video ${id}`
                 });
             } else {
                 console.error("Failed to add video:", response.message);
@@ -319,20 +456,25 @@ export default function WatchLaterPage() {
 
         for (const url of urls) {
             try {
-                const videoId = extractVideoId(url.trim());
+                const { id, isPlaylist } = extractVideoId(url.trim());
 
-                if (!videoId) {
+                if (!id) {
                     failedCount++;
                     continue;
                 }
 
-                const videoTitle = await fetchVideoTitle(videoId);
+                if (isPlaylist) {
+                    failedCount++;
+                    continue;
+                }
+
+                const videoTitle = await fetchVideoTitle(id);
 
                 const newVideo = {
-                    id: videoId,
-                    title: videoTitle || `Video ${videoId}`,
-                    thumbnailUrl: `https://img.youtube.com/vi/${videoId}/0.jpg`,
-                    url: `https://www.youtube.com/watch?v=${videoId}`,
+                    id,
+                    title: videoTitle || `Video ${id}`,
+                    thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
+                    url: `https://www.youtube.com/watch?v=${id}`,
                     status: "WATCH_LATER",
                     userId: userId,
                 };
@@ -373,24 +515,44 @@ export default function WatchLaterPage() {
 
     const removeVideo = async (status: string, videoId: string) => {
         try {
-            const loadingToast = toast.loading("Removing video...");
+            const loadingToast = toast.loading("Removing...");
 
-            const response = await apiRequest(`/cards/${videoId}`, {
-                method: "DELETE",
-            });
+            // Check if this is a playlist
+            if (videoId.toString().startsWith('playlist-')) {
+                const playlistId = videoId.replace('playlist-', '');
+                const response = await apiRequest(`/playlists/${playlistId}`, {
+                    method: "DELETE",
+                });
 
-            if (response.id === videoId) {
-                fetchColumns();
-                toast.dismiss(loadingToast);
-                toast.success("Video removed successfully");
+                if (response.success) {
+                    fetchColumns();
+                    fetchPlaylists();
+                    toast.dismiss(loadingToast);
+                    toast.success("Playlist removed successfully");
+                } else {
+                    console.error("Failed to remove playlist:", response.message);
+                    toast.dismiss(loadingToast);
+                    toast.error("Failed to remove playlist");
+                }
             } else {
-                console.error("Failed to remove video:", response.statusText);
-                toast.dismiss(loadingToast);
-                toast.error("Failed to remove video");
+                // Regular video removal
+                const response = await apiRequest(`/cards/${videoId}`, {
+                    method: "DELETE",
+                });
+
+                if (response.id === videoId) {
+                    fetchColumns();
+                    toast.dismiss(loadingToast);
+                    toast.success("Video removed successfully");
+                } else {
+                    console.error("Failed to remove video:", response.statusText);
+                    toast.dismiss(loadingToast);
+                    toast.error("Failed to remove video");
+                }
             }
         } catch (error) {
-            console.error("Failed to remove video:", error);
-            toast.error("Error removing video");
+            console.error("Failed to remove:", error);
+            toast.error("Error removing item");
         }
     };
 
@@ -425,50 +587,234 @@ export default function WatchLaterPage() {
         }
     };
 
-    const extractVideoId = (url: string) => {
+    const extractVideoId = (url: string): { id: string | null; isPlaylist: boolean } => {
+        if (!url) return { id: null, isPlaylist: false };
+
+        const playlistRegExp = /^.*(youtube.com\/playlist\?|youtube.com\/watch\?.*[&?]list=|youtu.be\/.*[?&]list=)(?:.*&)?list=([^#&?]*).*/;
+        const playlistMatch = url.match(playlistRegExp);
+
+        if (playlistMatch && playlistMatch[2]) {
+            return { id: playlistMatch[2], isPlaylist: true };
+        }
+
         const standardRegExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const standardMatch = url.match(standardRegExp);
 
         if (standardMatch && standardMatch[2] && standardMatch[2].length === 11) {
-            return standardMatch[2];
+            return { id: standardMatch[2], isPlaylist: false };
         }
 
         const vParamRegExp = /[?&]v=([^#&?]*)/;
         const vParamMatch = url.match(vParamRegExp);
 
         if (vParamMatch && vParamMatch[1] && vParamMatch[1].length === 11) {
-            return vParamMatch[1];
+            return { id: vParamMatch[1], isPlaylist: false };
         }
 
         try {
             const urlObj = new URL(url);
             if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+                const listParam = urlObj.searchParams.get('list');
+                if (listParam) {
+                    return { id: listParam, isPlaylist: true };
+                }
+
                 const videoId = urlObj.searchParams.get('v');
                 if (videoId && videoId.length === 11) {
-                    return videoId;
+                    return { id: videoId, isPlaylist: false };
                 }
 
                 if (urlObj.hostname === 'youtu.be') {
                     const pathParts = urlObj.pathname.split('/').filter(Boolean);
                     if (pathParts.length > 0 && pathParts[0].length === 11) {
-                        return pathParts[0];
+                        return { id: pathParts[0], isPlaylist: false };
                     }
                 }
             }
         } catch (e) {
         }
 
-        return null;
+        return { id: null, isPlaylist: false };
+    };
+
+    const formatDuration = (seconds: number | undefined): string => {
+        if (!seconds) return '';
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+
+        let formattedDuration = '';
+
+        if (hours > 0) {
+            formattedDuration += `${hours}:`;
+        }
+
+        formattedDuration += `${minutes.toString().padStart(2, '0')}:`;
+        formattedDuration += remainingSeconds.toString().padStart(2, '0');
+
+        return formattedDuration;
+    };
+
+    const fetchPlaylistDetails = async (playlistId: string) => {
+        if (!YOUTUBE_API_KEY) {
+            console.log("YouTube API key is missing");
+            return { title: `Playlist ${playlistId}`, thumbnailUrl: '' };
+        }
+
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${YOUTUBE_API_KEY}`
+        );
+
+        if (!response.ok) {
+            return { title: `Playlist ${playlistId}`, thumbnailUrl: '' };
+        }
+
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            const snippet = data.items[0].snippet;
+            return {
+                title: snippet.title,
+                thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
+            };
+        }
+
+        return { title: `Playlist ${playlistId}`, thumbnailUrl: '' };
+    };
+
+    const fetchPlaylistVideos = async (playlistId: string) => {
+        if (!YOUTUBE_API_KEY) {
+            console.log("YouTube API key is missing");
+            return [];
+        }
+
+        const videos = [];
+        let nextPageToken = '';
+
+        do {
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${YOUTUBE_API_KEY}${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`
+            );
+
+            if (!response.ok) {
+                break;
+            }
+
+            const data = await response.json();
+
+            if (data.items) {
+                videos.push(...data.items.map((item: { contentDetails: { videoId: any; }; snippet: { title: any; thumbnails: { high: { url: any; }; default: { url: any; }; }; }; }) => ({
+                    id: item.contentDetails.videoId,
+                    title: item.snippet.title,
+                    thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || `https://img.youtube.com/vi/${item.contentDetails.videoId}/0.jpg`,
+                    url: `https://www.youtube.com/watch?v=${item.contentDetails.videoId}`,
+                })));
+            }
+
+            nextPageToken = data.nextPageToken;
+        } while (nextPageToken);
+
+        return videos;
+    };
+
+    const addPlaylist = async (playlistId: string) => {
+        setIsAddingPlaylist(true);
+        const loadingToast = toast.loading("Processing playlist...");
+
+        try {
+            const { title, thumbnailUrl } = await fetchPlaylistDetails(playlistId);
+
+            const playlistResponse = await apiRequest('/playlists', {
+                method: "POST",
+                body: {
+                    id: playlistId,
+                    title,
+                    thumbnailUrl,
+                },
+            });
+
+            if (playlistResponse.statusCode === 409) {
+                toast.dismiss(loadingToast);
+                toast.warning("Playlist already exists in your collection");
+                setPlaylistUrl("");
+                setIsAddingPlaylist(false);
+                return;
+            }
+
+            const videos = await fetchPlaylistVideos(playlistId);
+
+            let addedCount = 0;
+            let duplicateCount = 0;
+            let failedCount = 0;
+
+            for (const video of videos) {
+                try {
+                    const response = await apiRequest('/cards', {
+                        method: "POST",
+                        body: {
+                            ...video,
+                            status: "WATCH_LATER",
+                            playlistId,
+                            userId,
+                        },
+                    });
+
+                    if (response.statusCode === 409) {
+                        duplicateCount++;
+                    } else if (response.id) {
+                        addedCount++;
+                    } else {
+                        failedCount++;
+                    }
+                } catch (error) {
+                    failedCount++;
+                }
+            }
+
+            toast.dismiss(loadingToast);
+
+            if (addedCount > 0) {
+                toast.success(`Added ${addedCount} videos from playlist`, {
+                    description: title
+                });
+                fetchColumns();
+                fetchPlaylists();
+            } else if (duplicateCount > 0 && addedCount === 0) {
+                toast.info("All videos from this playlist are already in your collection");
+            } else {
+                toast.error("Failed to add videos from playlist");
+            }
+
+            setPlaylistUrl("");
+        } catch (error) {
+            console.error("Failed to add playlist:", error);
+            toast.dismiss(loadingToast);
+            toast.error("Error processing playlist", {
+                description: "An unexpected error occurred"
+            });
+        } finally {
+            setIsAddingPlaylist(false);
+        }
     };
 
     const openVideo = (status: string, video: Video) => {
-        if (status === "WATCH_LATER") {
-            moveVideo(video.id, ColumnType.WATCHING);
+        if (video.isPlaylist) {
+            // Find the full playlist data from the playlists array
+            const playlistId = video.id.replace('playlist-', '');
+            const fullPlaylist = playlists.find(p => p.id === playlistId);
+            if (fullPlaylist) {
+                setSelectedPlaylist(fullPlaylist);
+            }
+        } else {
+            // Regular video handling
+            if (status === "WATCH_LATER") {
+                moveVideo(video.id, ColumnType.WATCHING);
+            }
+            window.open(video.url, "_blank");
+            toast.info(`Opening ${video.title}`, {
+                position: "bottom-right"
+            });
         }
-        window.open(video.url, "_blank");
-        toast.info(`Opening ${video.title}`, {
-            position: "bottom-right"
-        });
     };
 
     const logout = () => {
@@ -556,6 +902,8 @@ export default function WatchLaterPage() {
         const activeId = active.id;
         const overId = over.id;
 
+        const isPlaylist = activeId.toString().startsWith('playlist-');
+
         const isTargetColumn = Object.keys(columns).includes(overId);
 
         let sourceStatus = null;
@@ -597,27 +945,51 @@ export default function WatchLaterPage() {
             return newColumns;
         });
 
-        apiRequest(`/cards/${activeId}/reorder`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                status: destinationStatus,
-                order: columns[destinationStatus].videos.length
-            }),
-        })
-            .then(response => {
-                if (response.id === activeId) {
-                    toast.success(`Video moved to ${columns[destinationStatus].title}`);
-                } else {
-                    toast.error("Failed to move video");
-                    fetchColumns();
-                }
+        // For playlists, update all cards within the playlist
+        if (isPlaylist) {
+            const playlistId = activeId.replace('playlist-', '');
+
+            // Update playlist status on server
+            apiRequest(`/playlists/${playlistId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: destinationStatus
+                })
             })
-            .catch(error => {
-                console.error('Failed to update card:', error);
-                toast.error('Failed to move video');
-                fetchColumns();
-            });
+                .then(() => {
+                    toast.success(`Playlist moved to ${columns[destinationStatus].title}`);
+                    fetchPlaylists(); // Refresh playlists to update their status
+                })
+                .catch(error => {
+                    console.error('Failed to update playlist status:', error);
+                    toast.error('Failed to move playlist');
+                    fetchColumns();
+                });
+        } else {
+            // Regular video update
+            apiRequest(`/cards/${activeId}/reorder`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: destinationStatus,
+                    order: columns[destinationStatus].videos.length
+                }),
+            })
+                .then(response => {
+                    if (response.id === activeId) {
+                        toast.success(`Video moved to ${columns[destinationStatus].title}`);
+                    } else {
+                        toast.error("Failed to move video");
+                        fetchColumns();
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to update card:', error);
+                    toast.error('Failed to move video');
+                    fetchColumns();
+                });
+        }
     };
 
     const columnColors = {
@@ -791,7 +1163,7 @@ export default function WatchLaterPage() {
                                                 </div>
                                             ) : (
                                                 <div className="space-y-4">
-                                                    {column.videos.map((video) => (
+                                                    {column.videos.filter(video => !video.playlistId).map((video) => (
                                                         <SortableItem
                                                             key={video.id}
                                                             id={video.id}
@@ -925,9 +1297,8 @@ export default function WatchLaterPage() {
 
                             <button
                                 onClick={handleDeleteAccount}
-                                className={`px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-colors ${
-                                    isDeleting ? 'opacity-70 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-colors ${isDeleting ? 'opacity-70 cursor-not-allowed' : ''
+                                    }`}
                                 disabled={isDeleting || !deleteUsername || !deletePassword || !deleteConfirmationCode}
                             >
                                 {isDeleting ? (
@@ -948,6 +1319,194 @@ export default function WatchLaterPage() {
                         </div>
                     </Dialog.Panel>
                 </div>
+            </Dialog>
+
+            <Dialog
+                open={!!selectedPlaylist}
+                onClose={() => setSelectedPlaylist(null)}
+                className="relative z-50"
+            >
+                {selectedPlaylist && (
+                    <>
+                        <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
+
+                        <div className="fixed inset-0 flex items-center justify-center p-4">
+                            <Dialog.Panel className="w-full max-w-5xl h-[80vh] rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl overflow-hidden backdrop-blur-sm">
+                                <div className="h-full flex flex-col">
+                                    <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                                        <div className="flex items-center">
+                                            <div className="w-12 h-12 rounded overflow-hidden mr-4">
+                                                <img
+                                                    src={selectedPlaylist.thumbnailUrl || 'https://via.placeholder.com/48'}
+                                                    alt={selectedPlaylist.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div>
+                                                <Dialog.Title className="text-xl font-bold text-white flex items-center">
+                                                    <ListVideo className="h-5 w-5 text-purple-400 mr-2" />
+                                                    {selectedPlaylist.title}
+                                                </Dialog.Title>
+                                                <p className="text-white/60 text-sm">
+                                                    {selectedPlaylist._count?.cards || 0} videos
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <a
+                                                    href={`https://www.youtube.com/playlist?list=${selectedPlaylist.id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="ml-3 inline-flex items-center bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs px-3 py-1 rounded-full border border-red-500/20 shadow-lg transition-all"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                    }}
+                                                >
+                                                    <Youtube className="w-3 h-3 mr-1.5" />
+                                                    Open on YouTube
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setSelectedPlaylist(null)}
+                                            className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+
+                                    <div className="flex-grow overflow-y-auto p-5">
+                                        <div className="h-full flex space-x-4 overflow-x-auto pb-4">
+                                            {Object.entries(columns).map(([key, column]) => (
+                                                <div
+                                                    key={key}
+                                                    className="flex-shrink-0 w-72 h-full flex flex-col bg-white/5 rounded-lg overflow-hidden"
+                                                >
+                                                    <div className="p-3 bg-white/5 border-b border-white/10">
+                                                        <h3 className="text-white font-medium">{column.title}</h3>
+                                                    </div>
+
+                                                    <div className="flex-grow overflow-y-auto p-2">
+                                                        {selectedPlaylist.cards
+                                                            ?.filter((card: { status: string; }) => card.status === key)
+                                                            .map((card: {
+                                                                id: string;
+                                                                title: string;
+                                                                thumbnailUrl: string;
+                                                                url: string;
+                                                                status: string;
+                                                                playlistId?: string;
+                                                                addedAt?: string | Date;
+                                                                duration?: string;
+                                                                durationSeconds?: number;
+                                                            }) => (
+                                                                <div
+                                                                    key={card.id}
+                                                                    className="mb-3 bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:bg-white/20 transition-colors"
+                                                                    onClick={() => {
+                                                                        // Open the video and update its status
+                                                                        window.open(card.url, "_blank");
+
+                                                                        // If the card is in WATCH_LATER, move it to WATCHING
+                                                                        if (card.status === "WATCH_LATER") {
+                                                                            apiRequest(`/cards/${card.id}`, {
+                                                                                method: "PATCH",
+                                                                                headers: { "Content-Type": "application/json" },
+                                                                                body: JSON.stringify({
+                                                                                    status: "WATCHING"
+                                                                                }),
+                                                                            }).then(() => {
+                                                                                // Refresh the playlist data
+                                                                                const playlistId = selectedPlaylist.id;
+                                                                                apiRequest(`/playlists/${playlistId}`).then(updatedPlaylist => {
+                                                                                    setSelectedPlaylist(updatedPlaylist);
+                                                                                    fetchColumns(); // Also update main kanban
+                                                                                });
+                                                                            });
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <div className="relative">
+                                                                        <img
+                                                                            src={card.thumbnailUrl}
+                                                                            alt={card.title}
+                                                                            className="w-full h-28 object-cover"
+                                                                        />
+                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+
+                                                                        {card.addedAt && (
+                                                                            <div className="absolute top-1 left-1 bg-black/70 text-white/70 text-xs px-1.5 py-0.5 rounded">
+                                                                                {new Date(card.addedAt).toLocaleDateString()}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {card.durationSeconds && (
+                                                                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                                {formatDuration(card.durationSeconds)}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="p-3">
+                                                                        <div className="flex justify-between">
+                                                                            <h4 className="font-medium text-white text-sm line-clamp-2">
+                                                                                {card.title}
+                                                                            </h4>
+                                                                            <div className="ml-2">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        // Move to next column
+                                                                                        const nextStatus = key === "WATCH_LATER"
+                                                                                            ? "WATCHING"
+                                                                                            : key === "WATCHING"
+                                                                                                ? "WATCHED"
+                                                                                                : "WATCH_LATER";
+
+                                                                                        apiRequest(`/cards/${card.id}`, {
+                                                                                            method: "PATCH",
+                                                                                            headers: { "Content-Type": "application/json" },
+                                                                                            body: JSON.stringify({
+                                                                                                status: nextStatus
+                                                                                            }),
+                                                                                        }).then(() => {
+                                                                                            // Refresh the playlist data
+                                                                                            const playlistId = selectedPlaylist.id;
+                                                                                            apiRequest(`/playlists/${playlistId}`).then(updatedPlaylist => {
+                                                                                                setSelectedPlaylist(updatedPlaylist);
+                                                                                                fetchColumns(); // Also update main kanban
+                                                                                            });
+                                                                                        });
+                                                                                    }}
+                                                                                    className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+                                                                                >
+                                                                                    {key === "WATCH_LATER" && <Eye className="h-4 w-4" />}
+                                                                                    {key === "WATCHING" && <Check className="h-4 w-4" />}
+                                                                                    {key === "WATCHED" && <RotateCcw className="h-4 w-4" />}
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+
+                                                        {selectedPlaylist.cards?.filter(
+                                                            (card: { status: string }) => card.status === key
+                                                        ).length === 0 && (
+                                                                <div className="flex flex-col items-center justify-center h-32 text-white/30 text-sm">
+                                                                    <div className="mb-2">No videos here</div>
+                                                                    <div className="text-xs">Drag videos to this column</div>
+                                                                </div>
+                                                            )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Dialog.Panel>
+                        </div>
+                    </>
+                )}
             </Dialog>
 
             <Dialog
@@ -999,9 +1558,8 @@ export default function WatchLaterPage() {
 
                             <button
                                 onClick={processBulkAdd}
-                                className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors ${
-                                    isProcessing ? 'opacity-70 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''
+                                    }`}
                                 disabled={isProcessing || !bulkUrls.trim()}
                             >
                                 {isProcessing ? (

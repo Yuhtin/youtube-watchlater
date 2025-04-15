@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch } from '@nestjs/common';
 import { PlaylistService } from './playlist.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ColumnType } from '@prisma/client';
 
 @Controller('playlists')
 export class PlaylistController {
-  constructor(private readonly playlistService: PlaylistService) {}
+  constructor(private readonly playlistService: PlaylistService) { }
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -15,6 +16,21 @@ export class PlaylistController {
     });
 
     return result;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/status')
+  async updatePlaylistStatus(
+    @Param('id') id: string,
+    @Body() body: { status: ColumnType },
+    @Request() req
+  ) {
+    await this.playlistService.updateCardsStatus(id, req.user.userId, body.status);
+
+    return {
+      success: true,
+      message: 'Playlist status updated'
+    };
   }
 
   @UseGuards(JwtAuthGuard)
@@ -35,4 +51,5 @@ export class PlaylistController {
     const status = await this.playlistService.calculatePlaylistStatus(id);
     return { status };
   }
+
 }
