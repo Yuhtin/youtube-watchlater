@@ -1,30 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragOverlay,
-    useDroppable,
-} from "@dnd-kit/core";
-import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { SortableItem } from "../../../components/SortableItem";
+import { KanbanBoard, Column as KanbanColumn, CardItem } from '../../../components/KanbanBoard';
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
-import { fail } from "assert";
 
 interface Video {
     id: string;
@@ -67,54 +50,16 @@ interface Column {
 }
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; durationSeconds: number | null } | null> => {
-    try {
-        const existingResponse = await apiRequest(`/cards/${videoId}`);
 
-        if (existingResponse.status === 404) {
-            console.log(`Video ${videoId} not found in database, will try YouTube API`);
-        } else if (existingResponse.id === videoId) {
-            const existingData = await existingResponse.json();
-            if (existingData && existingData.title) {
-                return {
-                    title: existingData.title,
-                    durationSeconds: existingData.durationSeconds || null
-                };
-            }
-        }
+const getPlaylistStatus = (playlist: any) => {
+    const watchedCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHED').length || 0;
+    const watchingCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHING').length || 0;
+    const totalCount = playlist.cards?.length || 0;
 
-        if (!YOUTUBE_API_KEY) {
-            console.log("YouTube API key is missing");
-            return null;
-        }
-
-        const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`
-        );
-
-        if (!response.ok) {
-            if (response.status === 403) {
-                console.log("YouTube API key is invalid or rate limit exceeded");
-                return null;
-            }
-
-            return null;
-        }
-
-        const data = await response.json();
-        if (data.items && data.items.length > 0) {
-            const title = data.items[0].snippet.title;
-            const durationISO = data.items[0].contentDetails?.duration || null;
-            const durationSeconds = durationISO ? parseDuration(durationISO) : null;
-
-            return { title, durationSeconds };
-        }
-
-        return null;
-    } catch (error) {
-        console.log("Issue fetching video info:", error);
-        return null;
-    }
+    if (totalCount === 0) return 'WATCH_LATER';
+    if (watchedCount === totalCount) return 'WATCHED';
+    if (watchingCount > 0 || watchedCount > 0) return 'WATCHING';
+    return 'WATCH_LATER';
 };
 
 const parseDuration = (isoDuration: string): number => {
@@ -140,35 +85,9 @@ const parseDuration = (isoDuration: string): number => {
     }
 };
 
-function DroppableColumn({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
-    const { isOver, setNodeRef } = useDroppable({
-        id,
-    });
-
-    return (
-        <div
-            ref={setNodeRef}
-            className={`${className} ${isOver ? 'bg-white/5' : ''} transition-colors`}
-        >
-            {children}
-        </div>
-    );
-}
-
-const getPlaylistStatus = (playlist: any) => {
-    const watchedCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHED').length || 0;
-    const watchingCount = playlist.cards?.filter((card: { status: string; }) => card.status === 'WATCHING').length || 0;
-    const totalCount = playlist.cards?.length || 0;
-
-    if (totalCount === 0) return 'WATCH_LATER';
-    if (watchedCount === totalCount) return 'WATCHED';
-    if (watchingCount > 0 || watchedCount > 0) return 'WATCHING';
-    return 'WATCH_LATER';
-};
-
 export default function WatchLaterPage() {
     const [videoUrl, setVideoUrl] = useState("");
-    const [videoTitle, setVideoTitle] = useState("");
+    const [playlistUrl, setPlaylistUrl] = useState('');
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeVideo, setActiveVideo] = useState<Video | null>(null);
     const [username, setUsername] = useState("");
@@ -191,9 +110,9 @@ export default function WatchLaterPage() {
     const [showResults, setShowResults] = useState(false);
     const [playlists, setPlaylists] = useState<any[]>([]);
     const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
-    const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
-    const [playlistUrl, setPlaylistUrl] = useState('');
     const [isAddingPlaylist, setIsAddingPlaylist] = useState(false);
+    const [playlistActiveId, setPlaylistActiveId] = useState<string | null>(null);
+    const [playlistActiveItem, setPlaylistActiveItem] = useState<CardItem | null>(null);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -254,30 +173,6 @@ export default function WatchLaterPage() {
         }
     }, [userId, router]);
 
-    const removePlaylist = async (playlistId: string) => {
-        try {
-            const loadingToast = toast.loading("Removing playlist...");
-
-            const response = await apiRequest(`/playlists/${playlistId}`, {
-                method: "DELETE",
-            });
-
-            if (response.success) {
-                fetchColumns();
-                fetchPlaylists();
-                toast.dismiss(loadingToast);
-                toast.success("Playlist removed successfully");
-            } else {
-                console.error("Failed to remove playlist:", response.message);
-                toast.dismiss(loadingToast);
-                toast.error("Failed to remove playlist");
-            }
-        } catch (error) {
-            console.error("Failed to remove playlist:", error);
-            toast.error("Error removing playlist");
-        }
-    };
-
     const fetchColumns = async () => {
         try {
             const data = await apiRequest(`/cards?userId=${userId}`);
@@ -315,6 +210,7 @@ export default function WatchLaterPage() {
         try {
             const response = await apiRequest('/playlists');
             if (response) {
+                console.log(response);
                 setPlaylists(response);
 
                 const playlistCards = response.map((playlist: { id: any; title: any; thumbnailUrl: any; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
@@ -384,43 +280,20 @@ export default function WatchLaterPage() {
         const loadingToast = toast.loading("Adding video...");
 
         try {
-            const data = await fetchVideoInfo(id);
-            if (!data) {
-                toast.dismiss(loadingToast);
-                toast.error("Failed to fetch video info", {
-                    description: "Please check the URL and try again"
-                });
-                return;
-            }
-
-            const { title, durationSeconds } = data;
-
-            const newVideo = {
-                id,
-                title,
-                thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
-                url: `https://www.youtube.com/watch?v=${id}`,
-                status: "WATCH_LATER",
-                userId: userId,
-                durationSeconds: durationSeconds || null,
-            };
-
             const response = await apiRequest('/cards', {
                 method: "POST",
-                body: newVideo,
+                body: {
+                    id,
+                    url: `https://www.youtube.com/watch?v=${id}`,
+                    status: "WATCH_LATER",
+                    userId: userId,
+                },
             });
 
             if (response.statusCode === 409) {
                 toast.dismiss(loadingToast);
                 toast.warning("Video already in your collection", {
                     description: "This video already exists in your collection",
-                    action: {
-                        label: "View",
-                        onClick: () => {
-                            const existingStatus = response.data?.status || "WATCH_LATER";
-                            toast.info(`This video is in your ${columns[existingStatus]?.title || existingStatus} list`);
-                        }
-                    }
                 });
 
                 setVideoUrl("");
@@ -432,9 +305,7 @@ export default function WatchLaterPage() {
                 setVideoUrl("");
 
                 toast.dismiss(loadingToast);
-                toast.success("Video added successfully", {
-                    description: videoTitle || `Video ${id}`
-                });
+                toast.success("Video added successfully");
             } else {
                 console.error("Failed to add video:", response.message);
 
@@ -449,94 +320,6 @@ export default function WatchLaterPage() {
             toast.error("Error adding video", {
                 description: "An unexpected error occurred"
             });
-        }
-    };
-
-    const processBulkAdd = async () => {
-        if (!bulkUrls.trim()) {
-            toast.warning("Please enter YouTube URLs");
-            return;
-        }
-
-        const urls = bulkUrls.split('\n').filter(url => url.trim());
-
-        if (urls.length === 0) {
-            toast.warning("No valid URLs found");
-            return;
-        }
-
-        setIsProcessing(true);
-        setShowResults(false);
-
-        let successCount = 0;
-        let failedCount = 0;
-        let duplicateCount = 0;
-
-        const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
-
-        for (const url of urls) {
-            try {
-                const { id, isPlaylist } = extractVideoId(url.trim());
-
-                if (!id) {
-                    failedCount++;
-                    continue;
-                }
-
-                if (isPlaylist) {
-                    failedCount++;
-                    continue;
-                }
-
-                const data = await fetchVideoInfo(id);
-                if (!data) {
-                    failedCount++;
-                    continue;
-                }
-
-                const { title, durationSeconds } = data;
-
-                const newVideo = {
-                    id,
-                    title,
-                    thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
-                    url: `https://www.youtube.com/watch?v=${id}`,
-                    status: "WATCH_LATER",
-                    userId: userId,
-                    durationSeconds: durationSeconds || null,
-                };
-
-                const response = await apiRequest('/cards', {
-                    method: "POST",
-                    body: newVideo,
-                });
-
-                if (response.statusCode === 409) {
-                    duplicateCount++;
-                } else if (response.id) {
-                    successCount++;
-                } else {
-                    failedCount++;
-                }
-            } catch (error) {
-                console.error("Failed to add video:", error);
-                failedCount++;
-            }
-        }
-
-        toast.dismiss(loadingToast);
-
-        setProcessedResults({
-            success: successCount,
-            failed: failedCount,
-            duplicates: duplicateCount
-        });
-
-        setShowResults(true);
-        setIsProcessing(false);
-
-        if (successCount > 0) {
-            fetchColumns();
         }
     };
 
@@ -662,6 +445,95 @@ export default function WatchLaterPage() {
         }
 
         return { id: null, isPlaylist: false };
+    };
+
+    const getPlaylistById = (playlistId: string) => {
+        const playlist = playlists.find(p => p.id === playlistId);
+        if (playlist) {
+            return {
+                ...playlist,
+                status: getPlaylistStatus(playlist),
+                thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
+                url: `https://www.youtube.com/playlist?list=${playlist.id}`,
+            };
+        }
+
+        return null;
+    }
+
+    const openVideo = (status: string, video: Video) => {
+        if (video.isPlaylist) {
+            const playlistId = video.id.replace('playlist-', '');
+            const fullPlaylist = getPlaylistById(playlistId);
+            if (fullPlaylist) {
+                setSelectedPlaylist(fullPlaylist);
+            }
+        } else {
+            // Regular video handling
+            if (status === "WATCH_LATER") {
+                moveVideo(video.id, ColumnType.WATCHING);
+            }
+            window.open(video.url, "_blank");
+            toast.info(`Opening ${video.title}`, {
+                position: "bottom-right"
+            });
+        }
+    };
+
+
+
+    const logout = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("currentUsername");
+        router.push("/");
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteUsername !== username) {
+            toast.error("Username doesn't match");
+            return;
+        }
+
+        if (deleteConfirmationCode !== generatedCode) {
+            toast.error("Confirmation code doesn't match");
+            return;
+        }
+
+        setIsDeleting(true);
+
+        try {
+            const response = await apiRequest(`/users/${userId}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    password: deletePassword
+                })
+            });
+
+            if (response.success) {
+                toast.success("Account deleted successfully");
+                localStorage.removeItem("token");
+                localStorage.removeItem("currentUsername");
+                router.push("/");
+            } else {
+                toast.error(response.message || "Failed to delete account");
+            }
+        } catch (error) {
+            console.error("Error deleting account:", error);
+            toast.error("An error occurred while deleting your account");
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteModalOpen(false);
+        }
+    };
+
+    const generateRandomCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < 8; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
     };
 
     const formatDuration = (seconds: number | undefined): string => {
@@ -861,94 +733,6 @@ export default function WatchLaterPage() {
         }
     };
 
-    const getPlaylistById = (playlistId: string) => {
-        const playlist = playlists.find(p => p.id === playlistId);
-        if (playlist) {
-            return {
-                ...playlist,
-                status: getPlaylistStatus(playlist),
-                thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
-                url: `https://www.youtube.com/playlist?list=${playlist.id}`,
-            };
-        }
-
-        return null;
-    }
-
-    const openVideo = (status: string, video: Video) => {
-        if (video.isPlaylist) {
-            // Find the full playlist data from the playlists array
-            const playlistId = video.id.replace('playlist-', '');
-            const fullPlaylist = getPlaylistById(playlistId);
-            if (fullPlaylist) {
-                setSelectedPlaylist(fullPlaylist);
-            }
-        } else {
-            // Regular video handling
-            if (status === "WATCH_LATER") {
-                moveVideo(video.id, ColumnType.WATCHING);
-            }
-            window.open(video.url, "_blank");
-            toast.info(`Opening ${video.title}`, {
-                position: "bottom-right"
-            });
-        }
-    };
-
-    const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("currentUsername");
-        router.push("/");
-    };
-
-    const handleDeleteAccount = async () => {
-        if (deleteUsername !== username) {
-            toast.error("Username doesn't match");
-            return;
-        }
-
-        if (deleteConfirmationCode !== generatedCode) {
-            toast.error("Confirmation code doesn't match");
-            return;
-        }
-
-        setIsDeleting(true);
-
-        try {
-            const response = await apiRequest(`/users/${userId}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    password: deletePassword
-                })
-            });
-
-            if (response.success) {
-                toast.success("Account deleted successfully");
-                localStorage.removeItem("token");
-                localStorage.removeItem("currentUsername");
-                router.push("/");
-            } else {
-                toast.error(response.message || "Failed to delete account");
-            }
-        } catch (error) {
-            console.error("Error deleting account:", error);
-            toast.error("An error occurred while deleting your account");
-        } finally {
-            setIsDeleting(false);
-            setIsDeleteModalOpen(false);
-        }
-    };
-
-    const generateRandomCode = () => {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let result = '';
-        for (let i = 0; i < 8; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    };
-
     const openDeleteModal = () => {
         const code = generateRandomCode();
         setGeneratedCode(code);
@@ -959,7 +743,9 @@ export default function WatchLaterPage() {
         setIsDeleteModalOpen(true);
     };
 
-    const onDragStart = ({ active }: any) => {
+    // Handlers do kanban principal
+    const handleMainDragStart = (event: any) => {
+        const { active } = event;
         setActiveId(active.id);
 
         for (const [columnId, column] of Object.entries(columns)) {
@@ -971,7 +757,8 @@ export default function WatchLaterPage() {
         }
     };
 
-    const onDragEnd = ({ active, over }: any) => {
+    const handleMainDragEnd = (event: any) => {
+        const { active, over } = event;
         setActiveId(null);
         setActiveVideo(null);
 
@@ -980,24 +767,22 @@ export default function WatchLaterPage() {
         const activeId = active.id;
         const overId = over.id;
 
+        // Verifica se é uma playlist sendo arrastada
         const isPlaylist = activeId.toString().startsWith('playlist-');
         if (isPlaylist) {
-            toast.error("You cannot move playlists mannually, open them and move videos inside it");
+            toast.error("You cannot move playlists manually, open them and move videos inside it");
             return;
         }
 
-        const isTargetColumn = Object.keys(columns).includes(overId);
-
         let sourceStatus = null;
-        let destinationStatus = isTargetColumn ? overId : null;
+        let destinationStatus = Object.keys(columns).includes(overId) ? overId : null;
 
         for (const [columnId, column] of Object.entries(columns)) {
             if (column.videos.some(video => video.id === activeId)) {
                 sourceStatus = columnId;
             }
 
-            if (!destinationStatus && !isTargetColumn &&
-                column.videos.some(video => video.id === overId)) {
+            if (!destinationStatus && column.videos.some(video => video.id === overId)) {
                 destinationStatus = columnId;
             }
         }
@@ -1028,16 +813,163 @@ export default function WatchLaterPage() {
         });
     };
 
-    const columnColors = {
-        WATCH_LATER: "from-blue-400/20 to-blue-500/10 border-blue-300/30",
-        WATCHING: "from-amber-400/20 to-amber-500/10 border-amber-300/30",
-        WATCHED: "from-green-400/20 to-green-500/10 border-green-300/30",
+    // Function to check if drag should be disabled for an item
+    const disableDragForMainBoard = (itemId: string) => {
+        return itemId.toString().startsWith('playlist-');
     };
 
     const columnIcons = {
         WATCH_LATER: "⌚",
         WATCHING: "▶️",
         WATCHED: "✅",
+    };
+
+    const renderPlaylistKanban = () => {
+        const playlistColumns: { [key: string]: KanbanColumn } = {
+            WATCH_LATER: { id: "WATCH_LATER", title: "Watch Later", videos: [] },
+            WATCHING: { id: "WATCHING", title: "Watching", videos: [] },
+            WATCHED: { id: "WATCHED", title: "Watched", videos: [] },
+        };
+
+        if (selectedPlaylist?.cards) {
+            selectedPlaylist.cards.forEach((card: any) => {
+                if (playlistColumns[card.status]) {
+                    playlistColumns[card.status].videos.push({
+                        ...card,
+                        addedAt: new Date(card.addedAt || Date.now()).getTime()
+                    });
+                }
+            });
+        }
+
+        const handlePlaylistOpen = (status: string, item: CardItem) => {
+            window.open(item.url, "_blank");
+            if (status === "WATCH_LATER") {
+                const loadingToast = toast.loading("Updating status...");
+
+                apiRequest(`/cards/${item.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        status: "WATCHING"
+                    }),
+                }).then(async () => {
+                    const playlistId = selectedPlaylist.id;
+                    const updatedPlaylistResponse = await apiRequest(`/playlists/${playlistId}`);
+
+                    if (updatedPlaylistResponse) {
+                        setSelectedPlaylist({
+                            ...updatedPlaylistResponse,
+                            status: getPlaylistStatus(updatedPlaylistResponse),
+                            thumbnailUrl: updatedPlaylistResponse.thumbnailUrl || 'https://via.placeholder.com/300x168',
+                            url: `https://www.youtube.com/playlist?list=${updatedPlaylistResponse.id}`,
+                        });
+
+                        await fetchPlaylists();
+                        await fetchColumns();
+
+                        toast.dismiss(loadingToast);
+                        toast.success(`Video moved to Watching`);
+                    }
+                });
+            }
+        };
+
+        const handlePlaylistDragStart = (event: any) => {
+            const { active } = event;
+            setPlaylistActiveId(active.id);
+
+            for (const [_, column] of Object.entries(playlistColumns)) {
+                const item = column.videos.find(v => v.id === active.id);
+                if (item) {
+                    setPlaylistActiveItem(item);
+                    break;
+                }
+            }
+        };
+
+        const handlePlaylistDragEnd = (event: any) => {
+            const { active, over } = event;
+
+            setPlaylistActiveId(null);
+            setPlaylistActiveItem(null);
+
+            if (!over) return;
+
+            const activeId = active.id;
+            const overId = over.id;
+
+            let sourceStatus = null;
+            let destinationStatus = Object.keys(playlistColumns).includes(overId) ? overId : null;
+
+            for (const [columnId, column] of Object.entries(playlistColumns)) {
+                if (column.videos.some(video => video.id === activeId)) {
+                    sourceStatus = columnId;
+                }
+
+                if (!destinationStatus && column.videos.some(video => video.id === overId)) {
+                    destinationStatus = columnId;
+                }
+            }
+
+            if (!sourceStatus || !destinationStatus || sourceStatus === destinationStatus) return;
+
+            setSelectedPlaylist((prev: any) => {
+                const updatedPlaylist = { ...prev };
+
+                const videoToMove = updatedPlaylist.cards.find((v: any) => v.id === activeId);
+
+                if (!videoToMove) return prev;
+
+                videoToMove.status = destinationStatus;
+
+                return updatedPlaylist;
+            });
+
+            apiRequest(`/cards/${activeId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    status: destinationStatus
+                }),
+            }).then(() => {
+                fetchColumns();
+                fetchPlaylists();
+            });
+        };
+
+        return (
+            <KanbanBoard
+                columns={playlistColumns}
+                columnIcons={columnIcons}
+                onDragStart={handlePlaylistDragStart}
+                onDragEnd={handlePlaylistDragEnd}
+                onDragCancel={() => {
+                    setPlaylistActiveId(null);
+                    setPlaylistActiveItem(null);
+                }}
+                onItemOpen={handlePlaylistOpen}
+                onItemRemove={(status, itemId) => {
+                    const loadingToast = toast.loading("Removing video...");
+                    apiRequest(`/cards/${itemId}`, {
+                        method: "DELETE",
+                    }).then(() => {
+                        toast.dismiss(loadingToast);
+                        toast.success("Video removed successfully");
+                        fetchColumns();
+                        fetchPlaylists();
+                    }).catch(() => {
+                        toast.dismiss(loadingToast);
+                        toast.error("Failed to remove video");
+                    });
+                }}
+                hidePlaylistVideos={false}
+                activeId={playlistActiveId}
+                activeItem={playlistActiveItem}
+                emptyStateMessage="No videos in this section"
+                emptyStateSubMessage="Move videos here"
+            />
+        );
     };
 
     return (
@@ -1143,111 +1075,25 @@ export default function WatchLaterPage() {
                 </div>
             </div>
 
-            <DndContext
-                sensors={useSensors(
-                    useSensor(PointerSensor, {
-                        activationConstraint: {
-                            distance: 8,
-                        }
-                    }),
-                    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-                )}
-                collisionDetection={closestCenter}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
+            {/* Kanban principal */}
+            <KanbanBoard
+                columns={columns}
+                columnIcons={columnIcons}
+                onDragStart={handleMainDragStart}
+                onDragEnd={handleMainDragEnd}
                 onDragCancel={() => {
                     setActiveId(null);
                     setActiveVideo(null);
                 }}
-            >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {Object.entries(columns).map(([columnKey, column]) => {
-                        const colorClasses = columnKey === 'WATCH_LATER'
-                            ? 'bg-blue-500/10 border-blue-300/30'
-                            : columnKey === 'WATCHING'
-                                ? 'bg-amber-500/10 border-amber-300/30'
-                                : 'bg-green-500/10 border-green-300/30';
-                        const icon = columnIcons[columnKey as keyof typeof columnIcons];
-
-                        return (
-                            <div
-                                key={column.id}
-                                className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden`}
-                            >
-                                <div className="p-5 border-b border-white/10 backdrop-blur-sm bg-black/10">
-                                    <h2 className="text-xl font-bold text-white flex items-center justify-between">
-                                        <span className="flex items-center">
-                                            <span className="mr-2">{icon}</span>
-                                            {column.title}
-                                        </span>
-                                        <span className="bg-white/20 text-white text-sm py-1 px-3 rounded-full">
-                                            {column.videos.filter(video => !video.playlistId).length}
-                                        </span>
-                                    </h2>
-                                </div>
-
-                                <DroppableColumn
-                                    id={column.id}
-                                    className="min-h-[400px] h-full"
-                                >
-                                    <SortableContext
-                                        items={column.videos.map((video) => video.id)}
-                                        strategy={verticalListSortingStrategy}
-                                    >
-                                        <div className="p-4 min-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                                            {column.videos.length === 0 ? (
-                                                <div className="flex flex-col items-center justify-center h-full text-white/50 py-8">
-                                                    <div className="text-5xl mb-3">🎬</div>
-                                                    <p>No videos yet</p>
-                                                    <p className="text-sm">Drag videos here or add new ones</p>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    {column.videos.filter(video => !video.playlistId).map((video) => (
-                                                        <SortableItem
-                                                            key={video.id}
-                                                            id={video.id}
-                                                            video={video}
-                                                            status={column.id}
-                                                            onOpen={() => openVideo(column.id, video)}
-                                                            onRemove={() => removeVideo(column.id, video.id)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </SortableContext>
-                                </DroppableColumn>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <DragOverlay
-                    adjustScale={false}
-                    zIndex={9999}
-                >
-                    {activeId && activeVideo ? (
-                        <div className="w-full" style={{ maxWidth: "300px" }}>
-                            <div className="bg-white/15 backdrop-blur-xl border border-white/30 rounded-lg overflow-hidden shadow-xl">
-                                <div className="relative">
-                                    <img
-                                        src={activeVideo.thumbnailUrl}
-                                        alt={activeVideo.title}
-                                        className="w-full h-32 object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                                </div>
-                                <div className="p-3">
-                                    <h3 className="font-medium text-white text-sm line-clamp-2">
-                                        {activeVideo.title}
-                                    </h3>
-                                </div>
-                            </div>
-                        </div>
-                    ) : null}
-                </DragOverlay>
-            </DndContext>
+                onItemOpen={openVideo}
+                onItemRemove={removeVideo}
+                activeId={activeId}
+                activeItem={activeVideo}
+                hidePlaylistVideos={true}
+                disableDragFor={disableDragForMainBoard}
+                emptyStateMessage="No videos yet"
+                emptyStateSubMessage="Drag videos here or add new ones"
+            />
 
             <Dialog
                 open={isDeleteModalOpen}
@@ -1413,7 +1259,7 @@ export default function WatchLaterPage() {
                                                     e.stopPropagation();
                                                     // Show confirmation before delete
                                                     if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
-                                                        removePlaylist(selectedPlaylist.id);
+                                                        removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.id}`);
                                                         setSelectedPlaylist(null);
                                                     }
                                                 }}
@@ -1434,149 +1280,7 @@ export default function WatchLaterPage() {
                                     </div>
 
                                     <div className="flex-grow overflow-y-auto p-5">
-                                        <div className="h-full flex space-x-4 overflow-x-auto pb-4">
-                                            {Object.entries(columns).map(([key, column]) => (
-                                                <div
-                                                    key={key}
-                                                    className="flex-shrink-0 w-72 h-full flex flex-col bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg overflow-hidden"
-                                                >
-                                                    <div className="p-3 bg-white/5 border-b border-white/10">
-                                                        <h3 className="text-white font-medium">{column.title}</h3>
-                                                    </div>
-
-                                                    <div className="flex-grow overflow-y-auto p-2">
-                                                        {selectedPlaylist.cards
-                                                            ?.filter((card: { status: string; }) => card.status === key)
-                                                            .map((card: {
-                                                                id: string;
-                                                                title: string;
-                                                                thumbnailUrl: string;
-                                                                url: string;
-                                                                status: string;
-                                                                playlistId?: string;
-                                                                addedAt?: string | Date;
-                                                                duration?: string;
-                                                                durationSeconds?: number;
-                                                            }) => (
-                                                                <div
-                                                                    key={card.id}
-                                                                    className="mb-3 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg overflow-hidden cursor-pointer hover:bg-white/20 transition-all duration-300"
-                                                                    onClick={() => {
-                                                                        window.open(card.url, "_blank");
-
-                                                                        if (card.status === "WATCH_LATER") {
-                                                                            apiRequest(`/cards/${card.id}`, {
-                                                                                method: "PATCH",
-                                                                                headers: { "Content-Type": "application/json" },
-                                                                                body: JSON.stringify({
-                                                                                    status: "WATCHING"
-                                                                                }),
-                                                                            }).then(() => {
-                                                                                const playlistId = selectedPlaylist.id;
-                                                                                apiRequest(`/playlists/${playlistId}`).then(updatedPlaylist => {
-                                                                                    fetchColumns();
-                                                                                    fetchPlaylists();
-                                                                                    setSelectedPlaylist(getPlaylistById(updatedPlaylist.id));
-                                                                                });
-                                                                            });
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <div className="relative">
-                                                                        <img
-                                                                            src={card.thumbnailUrl}
-                                                                            alt={card.title}
-                                                                            className="w-full h-28 object-cover"
-                                                                        />
-                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
-
-                                                                        {card.addedAt && (
-                                                                            <div className="absolute top-1 left-1 bg-black/70 text-white/70 text-xs px-1.5 py-0.5 rounded">
-                                                                                {new Date(card.addedAt).toLocaleDateString()}
-                                                                            </div>
-                                                                        )}
-
-                                                                        {card.durationSeconds && (
-                                                                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                                {formatDuration(card.durationSeconds)}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="p-3">
-                                                                        <div className="flex justify-between">
-                                                                            <h4 className="font-medium text-white text-sm line-clamp-2">
-                                                                                {card.title}
-                                                                            </h4>
-                                                                            <div className="ml-2">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        const nextStatus = key === "WATCH_LATER"
-                                                                                            ? "WATCHING"
-                                                                                            : key === "WATCHING"
-                                                                                                ? "WATCHED"
-                                                                                                : "WATCH_LATER";
-
-                                                                                        const loadingToast = toast.loading("Updating status...");
-
-                                                                                        apiRequest(`/cards/${card.id}`, {
-                                                                                            method: "PATCH",
-                                                                                            headers: { "Content-Type": "application/json" },
-                                                                                            body: JSON.stringify({
-                                                                                                status: nextStatus
-                                                                                            }),
-                                                                                        }).then(async () => {
-                                                                                            const playlistId = selectedPlaylist.id;
-                                                                                            const updatedPlaylistResponse = await apiRequest(`/playlists/${playlistId}`);
-
-                                                                                            if (updatedPlaylistResponse) {
-                                                                                                setSelectedPlaylist({
-                                                                                                    ...updatedPlaylistResponse,
-                                                                                                    status: getPlaylistStatus(updatedPlaylistResponse),
-                                                                                                    thumbnailUrl: updatedPlaylistResponse.thumbnailUrl || 'https://via.placeholder.com/300x168',
-                                                                                                    url: `https://www.youtube.com/playlist?list=${updatedPlaylistResponse.id}`,
-                                                                                                });
-
-                                                                                                await fetchPlaylists();
-
-                                                                                                await fetchColumns();
-
-                                                                                                toast.dismiss(loadingToast);
-                                                                                                toast.success(`Video moved to ${columns[nextStatus].title}`);
-                                                                                            } else {
-                                                                                                toast.dismiss(loadingToast);
-                                                                                                toast.error("Failed to update status");
-                                                                                            }
-                                                                                        }).catch(error => {
-                                                                                            console.error("Error updating status:", error);
-                                                                                            toast.dismiss(loadingToast);
-                                                                                            toast.error("Error updating status");
-                                                                                        });
-                                                                                    }}
-                                                                                    className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
-                                                                                >
-                                                                                    {key === "WATCH_LATER" && <Eye className="h-4 w-4" />}
-                                                                                    {key === "WATCHING" && <Check className="h-4 w-4" />}
-                                                                                    {key === "WATCHED" && <RotateCcw className="h-4 w-4" />}
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-
-                                                        {selectedPlaylist.cards?.filter(
-                                                            (card: { status: string }) => card.status === key
-                                                        ).length === 0 && (
-                                                                <div className="flex flex-col items-center justify-center h-32 text-white/30 text-sm">
-                                                                    <div className="mb-2">No videos here</div>
-                                                                    <div className="text-xs">Drag videos to this column</div>
-                                                                </div>
-                                                            )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        {selectedPlaylist && renderPlaylistKanban()}
                                     </div>
                                 </div>
                             </Dialog.Panel>
@@ -1633,7 +1337,62 @@ export default function WatchLaterPage() {
                             </button>
 
                             <button
-                                onClick={processBulkAdd}
+                                onClick={() => {
+                                    setIsProcessing(true);
+                                    setShowResults(false);
+
+                                    const urls = bulkUrls.split('\n').filter(url => url.trim());
+
+                                    let successCount = 0;
+                                    let failedCount = 0;
+                                    let duplicateCount = 0;
+
+                                    const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
+
+                                    Promise.all(urls.map(url => {
+                                        const { id, isPlaylist } = extractVideoId(url.trim());
+
+                                        if (!id || isPlaylist) {
+                                            failedCount++;
+                                            return Promise.resolve();
+                                        }
+
+                                        return apiRequest('/cards', {
+                                            method: "POST",
+                                            body: {
+                                                id,
+                                                url: `https://www.youtube.com/watch?v=${id}`,
+                                                status: "WATCH_LATER",
+                                                userId: userId,
+                                            },
+                                        }).then(response => {
+                                            if (response.statusCode === 409) {
+                                                duplicateCount++;
+                                            } else if (response.id) {
+                                                successCount++;
+                                            } else {
+                                                failedCount++;
+                                            }
+                                        }).catch(() => {
+                                            failedCount++;
+                                        });
+                                    })).then(() => {
+                                        toast.dismiss(loadingToast);
+
+                                        setProcessedResults({
+                                            success: successCount,
+                                            failed: failedCount,
+                                            duplicates: duplicateCount
+                                        });
+
+                                        setShowResults(true);
+                                        setIsProcessing(false);
+
+                                        if (successCount > 0) {
+                                            fetchColumns();
+                                        }
+                                    });
+                                }}
                                 className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''
                                     }`}
                                 disabled={isProcessing || !bulkUrls.trim()}

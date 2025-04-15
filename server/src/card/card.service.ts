@@ -214,6 +214,7 @@ export class CardService {
         
         if (updatedCard.playlistId) {
             await this.playlistService.calculatePlaylistStatus(updatedCard.playlistId);
+            this.playlistService.calculatePlaylistDuration(updatedCard.playlistId);
         }
         
         return updatedCard;

@@ -1,16 +1,19 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Trash2, ExternalLink, Clock } from 'lucide-react';
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Trash2, ExternalLink, Clock, ListVideo } from "lucide-react";
 
 interface Video {
   id: string;
   title: string;
   thumbnailUrl: string;
   url: string;
-  addedAt: number;
-  status: string;
-  updatedAt?: number;
+  status?: string;
+  isPlaylist?: boolean;
+  addedAt?: number;
   durationSeconds?: number;
+  _count?: {
+    cards?: number;
+  };
 }
 
 interface SortableItemProps {
@@ -20,30 +23,29 @@ interface SortableItemProps {
   onOpen: () => void;
   onRemove: () => void;
   isPlaylist?: boolean;
+  disabled?: boolean;
 }
 
-const formatDate = (timestamp: number) => {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-};
-
 const formatDuration = (seconds: number | undefined): string => {
-  if (!seconds) return 'Empty';
-
+  if (!seconds) return '';
+  
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
-
+  
   if (hours > 0) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
-
+  
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }: SortableItemProps) {
+const formatDate = (timestamp: number | undefined): string => {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleDateString();
+};
+
+export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, disabled = false }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -51,8 +53,9 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
     transform,
     transition,
     isDragging,
-  } = useSortable({
+  } = useSortable({ 
     id,
+    disabled,
     data: {
       type: 'video',
       video,
@@ -72,12 +75,13 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${isPlaylist
-          ? "bg-purple-500/20 border-2 border-purple-500/40"
+      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${
+        isPlaylist 
+          ? "bg-purple-500/20 border-2 border-purple-500/40" 
           : "bg-white/10 border border-white/20"
-        } hover:bg-white/15 transition-all duration-300`}
-      {...attributes}
-      {...listeners}
+      } hover:bg-white/15 transition-all duration-300`}
+      {...(disabled ? {} : attributes)}
+      {...(disabled ? {} : listeners)}
     >
       <div className="relative">
         <div className="relative">
@@ -101,6 +105,15 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
           </div>
         </div>
 
+        {/* Playlist indicator */}
+        {isPlaylist && (
+          <div className="absolute top-2 left-2 bg-purple-500/90 text-white rounded-md px-1.5 py-0.5 text-xs font-medium flex items-center">
+            <ListVideo className="w-3 h-3 mr-1" /> 
+            Playlist • {video._count?.cards || 0} videos
+          </div>
+        )}
+
+        {/* Duration badge */}
         {video.durationSeconds && video.durationSeconds > 0 && (
           <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs text-white px-2 py-1 rounded flex items-center">
             <Clock size={10} className="mr-1" />
@@ -108,10 +121,14 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
           </div>
         )}
 
-        <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white/80 px-2 py-1 rounded">
-          {formatDate(video.addedAt)}
-        </div>
+        {/* Date badge */}
+        {video.addedAt && (
+          <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white/80 px-2 py-1 rounded">
+            {formatDate(video.addedAt)}
+          </div>
+        )}
 
+        {/* Delete button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -124,21 +141,31 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
       </div>
 
       <div className="p-3">
-        <h3 className="font-medium text-white text-sm line-clamp-2 mb-2">{video.title}</h3>
-
-        <div className="flex justify-end mt-1 space-x-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen();
-            }}
-            className="text-white/60 hover:text-white p-1 rounded transition-colors"
-            title="Open video"
-          >
-            <ExternalLink size={16} />
-          </button>
+        <div className="flex justify-between">
+          <h3 className="font-medium text-white text-sm line-clamp-2 flex-1" onClick={onOpen}>
+            {video.title}
+          </h3>
+          <div className="ml-2 flex-shrink-0">
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </div>
         </div>
       </div>
+      
+      {disabled && isPlaylist && (
+        <div className="absolute top-0 left-0 w-full h-full bg-black/10 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={onOpen}>
+          <div className="bg-black/50 px-2 py-1 rounded text-xs text-white">
+            Open to manage videos
+          </div>
+        </div>
+      )}
     </div>
   );
 }

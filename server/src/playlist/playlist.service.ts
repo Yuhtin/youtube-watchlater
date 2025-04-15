@@ -156,6 +156,9 @@ export class PlaylistService {
     const cards = await this.prisma.card.findMany({
       where: {
         playlistId,
+        status: {
+          not: ColumnType.WATCHED,
+        },
       },
       select: {
         durationSeconds: true,
