@@ -101,8 +101,8 @@ export function KanbanBoard({
 
                     return (
                         <div
-                            key={columnKey}
-                            className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden h-full`}
+                            key={column.id}
+                            className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden flex flex-col h-full`}
                         >
                             <div className="p-5 border-b border-white/10 backdrop-blur-sm bg-black/10">
                                 <h2 className="text-xl font-bold text-white flex items-center justify-between">
@@ -117,14 +117,14 @@ export function KanbanBoard({
                             </div>
 
                             <DroppableColumn
-                                id={columnKey}
-                                className="min-h-[400px] h-full"
+                                id={column.id}
+                                className="flex-1 min-h-[400px] max-h-[600px] flex flex-col"
                             >
                                 <SortableContext
                                     items={column.videos.map((video) => video.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                    <div className="p-4 min-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                                    <div className="p-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                         {column.videos.length === 0 ? (
                                             <div className="flex flex-col items-center justify-center h-full text-white/50 py-8">
                                                 <div className="text-5xl mb-3">🎬</div>
@@ -148,7 +148,7 @@ export function KanbanBoard({
                                             </div>
                                         )}
                                     </div>
-                                </SortableContext>
+                                </SortableContext>                                
                             </DroppableColumn>
                         </div>
                     );

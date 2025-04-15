@@ -771,7 +771,7 @@ export default function WatchLaterPage() {
                     description: title
                 });
 
-                fetchColumns();                
+                fetchColumns();
             } else if (duplicateCount > 0 && addedCount === 0) {
                 toast.info("All videos from this playlist are already in your collection");
             } else {
@@ -823,26 +823,31 @@ export default function WatchLaterPage() {
         const activeId = active.id;
         const overId = over.id;
 
-        const isPlaylist = activeId.toString().startsWith('playlist-');
-        if (isPlaylist) {
-            toast.error("You cannot move playlists manually, open them and move videos inside it");
-            return;
-        }
+        const isOverColumn = over.data?.current?.type === "column";
 
+        let destinationStatus = isOverColumn ? overId : null;
         let sourceStatus = null;
-        let destinationStatus = Object.keys(columns).includes(overId) ? overId : null;
 
         for (const [columnId, column] of Object.entries(columns)) {
             if (column.videos.some(video => video.id === activeId)) {
                 sourceStatus = columnId;
-            }
-
-            if (!destinationStatus && column.videos.some(video => video.id === overId)) {
-                destinationStatus = columnId;
+                break;
             }
         }
 
-        if (!sourceStatus || !destinationStatus || sourceStatus === destinationStatus) return;
+        if (!destinationStatus) {
+            for (const [columnId, column] of Object.entries(columns)) {
+                if (column.videos.some(video => video.id === overId)) {
+                    destinationStatus = columnId;
+                    break;
+                }
+            }
+        }
+
+        if (!sourceStatus || !destinationStatus || sourceStatus === destinationStatus) {
+            console.log("Invalid move, returning");
+            return;
+        }
 
         setColumns(prev => {
             const newColumns = { ...prev };
@@ -866,6 +871,8 @@ export default function WatchLaterPage() {
 
             return newColumns;
         });
+
+        moveVideo(activeId, destinationStatus as ColumnType);
     };
 
     const disableDragForMainBoard = (itemId: string) => {
@@ -979,15 +986,7 @@ export default function WatchLaterPage() {
                 return updatedPlaylist;
             });
 
-            apiRequest(`/cards/${activeId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    status: destinationStatus
-                }),
-            }).then(() => {
-                fetchColumns();
-            });
+            moveVideo(activeId, destinationStatus as ColumnType);
         };
 
         return (
