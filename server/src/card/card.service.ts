@@ -49,16 +49,17 @@ export class CardService {
                 };
             }
 
-            // Add durationSeconds if duration is provided
-            if (data.duration) {
-                data.durationSeconds = this.parseDuration(data.duration);
-            }
-
-            return await this.prisma.card.create({
+            const response = await this.prisma.card.create({
                 data: {
                     ...data,
                 },
             });
+
+            if (data.playlistId) {
+                this.playlistService.calculatePlaylistDuration(data.playlistId);
+            }
+
+            return response;
         } catch (error) {
             if (error.code === 'P2002') {
                 return {

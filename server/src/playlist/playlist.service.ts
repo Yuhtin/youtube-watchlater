@@ -112,4 +112,72 @@ export class PlaylistService {
       },
     });
   }
+
+  async remove(id: string, userId: string) {
+    const playlist = await this.prisma.playlist.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!playlist) {
+      return {
+        statusCode: 404,
+        message: "Playlist not found",
+      };
+    }
+
+    if (playlist.userId !== userId) {
+      return {
+        statusCode: 403,
+        message: "You do not have permission to delete this playlist",
+      };
+    }
+
+    await this.prisma.card.deleteMany({
+      where: {
+        playlistId: id,
+      },
+    });
+
+    await this.prisma.playlist.delete({
+      where: {
+        id,
+      },
+    });
+
+    return {
+      statusCode: 200,
+      message: "Playlist deleted successfully",
+    };
+  }
+
+  async calculatePlaylistDuration(playlistId: string) {
+    const cards = await this.prisma.card.findMany({
+      where: {
+        playlistId,
+      },
+      select: {
+        durationSeconds: true,
+      },
+    });
+
+    const totalDuration = cards.reduce((acc, card) => {
+      return acc + (card.durationSeconds || 0);
+    }, 0);
+
+    console.log('Total Duration:', totalDuration);
+
+    await this.prisma.playlist.update({
+      where: {
+        id: playlistId,
+      },
+      data: {
+        durationSeconds: totalDuration,
+      },
+    });
+
+    return totalDuration;
+  }
+
 }

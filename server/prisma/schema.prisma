@@ -19,12 +19,13 @@ model User {
 }
 
 model Playlist {
-  id           String   @id
-  title        String
-  userId       String
-  thumbnailUrl String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id
+  title           String
+  userId          String
+  thumbnailUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  durationSeconds Int?
 
   user  User   @relation(fields: [userId], references: [id])
   cards Card[]
@@ -41,7 +42,6 @@ model Card {
   order           Int        @default(0)
   userId          String
   playlistId      String?
-  duration        String? 
   durationSeconds Int?
   addedAt         DateTime   @default(now())
 

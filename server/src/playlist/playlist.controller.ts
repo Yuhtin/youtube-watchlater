@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Patch, Delete } from '@nestjs/common';
 import { PlaylistService } from './playlist.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ColumnType } from '@prisma/client';
@@ -50,6 +50,17 @@ export class PlaylistController {
   async getPlaylistStatus(@Param('id') id: string) {
     const status = await this.playlistService.calculatePlaylistStatus(id);
     return { status };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Request() req) {
+    const result = await this.playlistService.remove(id, req.user.userId);
+    return {
+      success: true,
+      message: 'Playlist deleted',
+      result
+    };
   }
 
 }

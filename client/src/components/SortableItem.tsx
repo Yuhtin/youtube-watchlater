@@ -1,7 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { time } from 'console';
-import { Trash2, ExternalLink } from 'lucide-react';
+import { Trash2, ExternalLink, Clock } from 'lucide-react';
 
 interface Video {
   id: string;
@@ -11,6 +10,7 @@ interface Video {
   addedAt: number;
   status: string;
   updatedAt?: number;
+  durationSeconds?: number;
 }
 
 interface SortableItemProps {
@@ -21,6 +21,27 @@ interface SortableItemProps {
   onRemove: () => void;
   isPlaylist?: boolean;
 }
+
+const formatDate = (timestamp: number) => {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const formatDuration = (seconds: number | undefined): string => {
+  if (!seconds) return 'Empty';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
 
 export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }: SortableItemProps) {
   const {
@@ -47,22 +68,14 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
     position: isDragging ? 'relative' : 'static' as any,
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md ${
-        isPlaylist 
-          ? "bg-purple-500/20 border-2 border-purple-500/40" 
+      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${isPlaylist
+          ? "bg-purple-500/20 border-2 border-purple-500/40"
           : "bg-white/10 border border-white/20"
-      } hover:bg-white/15 transition-all duration-300`}
+        } hover:bg-white/15 transition-all duration-300`}
       {...attributes}
       {...listeners}
     >
@@ -88,7 +101,14 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }
           </div>
         </div>
 
-        <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white px-2 py-1 rounded">
+        {video.durationSeconds && video.durationSeconds > 0 && (
+          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs text-white px-2 py-1 rounded flex items-center">
+            <Clock size={10} className="mr-1" />
+            {formatDuration(video.durationSeconds)}
+          </div>
+        )}
+
+        <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white/80 px-2 py-1 rounded">
           {formatDate(video.addedAt)}
         </div>
 
