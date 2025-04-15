@@ -1,10 +1,36 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ColumnType, Prisma } from '@prisma/client';
+import { PlaylistService } from 'src/playlist/playlist.service';
 
 @Injectable()
 export class CardService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private playlistService : PlaylistService) { }
+
+    private parseDuration(duration: string): number {
+        if (!duration) {
+            return 0;
+        }
+
+        try {
+            const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+            const match = duration.match(regex);
+
+            if (!match) {
+                console.warn(`Invalid duration format: ${duration}`);
+                return 0;
+            }
+
+            const hours = match[1] ? parseInt(match[1], 10) : 0;
+            const minutes = match[2] ? parseInt(match[2], 10) : 0;
+            const seconds = match[3] ? parseInt(match[3], 10) : 0;
+
+            return hours * 3600 + minutes * 60 + seconds;
+        } catch (error) {
+            console.error(`Error parsing duration: ${duration}`, error);
+            return 0;
+        }
+    }
 
     async create(data: any) {
         try {
@@ -21,6 +47,11 @@ export class CardService {
                     message: "Video already exists in your collection",
                     data: existingCard
                 };
+            }
+
+            // Add durationSeconds if duration is provided
+            if (data.duration) {
+                data.durationSeconds = this.parseDuration(data.duration);
             }
 
             return await this.prisma.card.create({
@@ -139,6 +170,15 @@ export class CardService {
         });
     }
 
+    async findAllWithFilter(userId: string, filter: any) {
+        return this.prisma.card.findMany({
+            where: filter,
+            orderBy: {
+                order: 'asc',
+            },
+        });
+    }
+
     async findOne(id: string) {
         return this.prisma.card.findUnique({ where: { id } });
     }
@@ -157,5 +197,24 @@ export class CardService {
                 userId,
             },
         });
+    }
+
+    async updateCardStatus(id: string, status: ColumnType) {
+        const card = await this.findOne(id);
+        
+        if (!card) {
+            throw new Error('Card not found');
+        }
+        
+        const updatedCard = await this.prisma.card.update({
+            where: { id },
+            data: { status },
+        });
+        
+        if (updatedCard.playlistId) {
+            await this.playlistService.calculatePlaylistStatus(updatedCard.playlistId);
+        }
+        
+        return updatedCard;
     }
 }

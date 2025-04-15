@@ -26,12 +26,54 @@ export class CardController {
 
     @UseGuards(JwtAuthGuard)
     @Get()
-    findAll(@Query('userId') userId: string, @Request() req) {
+    findAll(
+        @Query('userId') userId: string,
+        @Query('search') search: string,
+        @Query('minDuration') minDuration: string,
+        @Query('maxDuration') maxDuration: string,
+        @Query('fromDate') fromDate: string,
+        @Query('toDate') toDate: string,
+        @Request() req
+    ) {
         if (userId !== req.user.userId) {
             return { statusCode: 403, message: 'Unauthorized access to other user data' };
         }
 
-        return this.cardService.findAllByUser(userId);
+        // Build filter criteria
+        const filter: any = { userId };
+
+        if (search) {
+            filter.title = {
+                contains: search,
+                mode: 'insensitive'
+            };
+        }
+
+        if (minDuration || maxDuration) {
+            filter.durationSeconds = {};
+
+            if (minDuration) {
+                filter.durationSeconds.gte = parseInt(minDuration, 10);
+            }
+
+            if (maxDuration) {
+                filter.durationSeconds.lte = parseInt(maxDuration, 10);
+            }
+        }
+
+        if (fromDate || toDate) {
+            filter.addedAt = {};
+
+            if (fromDate) {
+                filter.addedAt.gte = new Date(fromDate);
+            }
+
+            if (toDate) {
+                filter.addedAt.lte = new Date(toDate);
+            }
+        }
+
+        return this.cardService.findAllWithFilter(userId, filter);
     }
 
     @UseGuards(JwtAuthGuard)
