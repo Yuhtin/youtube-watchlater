@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
@@ -8,6 +8,7 @@ import { Dialog } from '@headlessui/react';
 import { KanbanBoard, Column as KanbanColumn, CardItem } from '../../../components/KanbanBoard';
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
+import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
 
 interface Video {
     id: string;
@@ -1023,6 +1024,59 @@ export default function WatchLaterPage() {
         );
     };
 
+    const [filters, setFilters] = useState<FilterOptions>({
+        search: '',
+        maxDuration: null,
+        sortOrder: 'newest'
+    });
+
+    const applyFilters = (videos: CardItem[]): CardItem[] => {
+        if (!filters.search && filters.maxDuration === null && filters.sortOrder === 'newest') {
+            return videos.filter(video => !video.playlistId || video.isPlaylist);
+        }
+
+        return videos.filter(video => {
+            if (video.playlistId && !video.isPlaylist) {
+                return false;
+            }
+
+            if (filters.search && !video.title.toLowerCase().includes(filters.search.toLowerCase())) {
+                return false;
+            }
+
+            if (filters.maxDuration !== null &&
+                video.durationSeconds &&
+                video.durationSeconds > filters.maxDuration) {
+                return false;
+            }
+
+            return true;
+        }).sort((a, b) => {
+            if (filters.sortOrder === 'newest') {
+                return new Date(b.addedAt || 0).getTime() - new Date(a.addedAt || 0).getTime();
+            } else if (filters.sortOrder === 'oldest') {
+                return new Date(a.addedAt || 0).getTime() - new Date(b.addedAt || 0).getTime();
+            } else if (filters.sortOrder === 'shortest') {
+                return (a.durationSeconds || 0) - (b.durationSeconds || 0);
+            } else {
+                return (b.durationSeconds || 0) - (a.durationSeconds || 0);
+            }
+        });
+    };
+
+    const filteredColumns = useMemo(() => {
+        const result = { ...columns };
+
+        for (const columnKey of Object.keys(result)) {
+            result[columnKey] = {
+                ...result[columnKey],
+                videos: applyFilters(result[columnKey].videos)
+            };
+        }
+
+        return result;
+    }, [columns, filters]);
+
     return (
         <div className="min-h-screen bg-[url('/images/gradient-bg.jpg')] bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
@@ -1123,11 +1177,18 @@ export default function WatchLaterPage() {
                             <List className="mr-2 h-5 w-5" /> Bulk Add
                         </button>
                     </div>
+
+                    <div className="border-t border-white/5 my-6"></div>
+
+                    <FilterBar
+                        onChange={setFilters}
+                        initialFilters={filters}
+                    />
                 </div>
             </div>
 
             <KanbanBoard
-                columns={columns}
+                columns={filteredColumns}
                 columnIcons={columnIcons}
                 onDragStart={handleMainDragStart}
                 onDragEnd={handleMainDragEnd}
