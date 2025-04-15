@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Plus, X, Youtube, ArrowLeft, Trash2, AlertCircle, Eye, EyeOff, List } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
@@ -30,7 +30,7 @@ interface Video {
     title: string;
     thumbnailUrl: string;
     url: string;
-    createdAt: number;
+    addedAt: number;
     status: string;
     updatedAt?: number;
 }
@@ -119,6 +119,15 @@ export default function WatchLaterPage() {
     const [generatedCode, setGeneratedCode] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
+    const [bulkUrls, setBulkUrls] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [processedResults, setProcessedResults] = useState<{ success: number; failed: number; duplicates: number }>({
+        success: 0,
+        failed: 0,
+        duplicates: 0
+    });
+    const [showResults, setShowResults] = useState(false);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -283,6 +292,82 @@ export default function WatchLaterPage() {
             toast.error("Error adding video", {
                 description: "An unexpected error occurred"
             });
+        }
+    };
+
+    const processBulkAdd = async () => {
+        if (!bulkUrls.trim()) {
+            toast.warning("Please enter YouTube URLs");
+            return;
+        }
+
+        const urls = bulkUrls.split('\n').filter(url => url.trim());
+
+        if (urls.length === 0) {
+            toast.warning("No valid URLs found");
+            return;
+        }
+
+        setIsProcessing(true);
+        setShowResults(false);
+
+        let successCount = 0;
+        let failedCount = 0;
+        let duplicateCount = 0;
+
+        const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
+
+        for (const url of urls) {
+            try {
+                const videoId = extractVideoId(url.trim());
+
+                if (!videoId) {
+                    failedCount++;
+                    continue;
+                }
+
+                const videoTitle = await fetchVideoTitle(videoId);
+
+                const newVideo = {
+                    id: videoId,
+                    title: videoTitle || `Video ${videoId}`,
+                    thumbnailUrl: `https://img.youtube.com/vi/${videoId}/0.jpg`,
+                    url: `https://www.youtube.com/watch?v=${videoId}`,
+                    status: "WATCH_LATER",
+                    userId: userId,
+                };
+
+                const response = await apiRequest('/cards', {
+                    method: "POST",
+                    body: newVideo,
+                });
+
+                if (response.statusCode === 409) {
+                    duplicateCount++;
+                } else if (response.id) {
+                    successCount++;
+                } else {
+                    failedCount++;
+                }
+            } catch (error) {
+                console.error("Failed to add video:", error);
+                failedCount++;
+            }
+        }
+
+        toast.dismiss(loadingToast);
+
+        setProcessedResults({
+            success: successCount,
+            failed: failedCount,
+            duplicates: duplicateCount
+        });
+
+        setShowResults(true);
+        setIsProcessing(false);
+
+        if (successCount > 0) {
+            fetchColumns();
         }
     };
 
@@ -640,6 +725,12 @@ export default function WatchLaterPage() {
                         >
                             <Plus className="mr-2 h-5 w-5" /> Add Video
                         </button>
+                        <button
+                            onClick={() => setIsBulkAddModalOpen(true)}
+                            className="whitespace-nowrap bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center"
+                        >
+                            <List className="mr-2 h-5 w-5" /> Bulk Add
+                        </button>
                     </div>
                 </div>
             </div>
@@ -851,6 +942,80 @@ export default function WatchLaterPage() {
                                     <>
                                         <Trash2 className="h-4 w-4 mr-2" />
                                         Delete Forever
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+
+            <Dialog
+                open={isBulkAddModalOpen}
+                onClose={() => !isProcessing && setIsBulkAddModalOpen(false)}
+                className="relative z-50"
+            >
+                <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
+
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl p-6 backdrop-blur-sm">
+                        <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
+                            <List className="h-5 w-5 text-blue-500 mr-2" />
+                            Bulk Add Videos
+                        </Dialog.Title>
+
+                        <div className="space-y-4">
+                            <textarea
+                                value={bulkUrls}
+                                onChange={(e) => setBulkUrls(e.target.value)}
+                                className="w-full h-40 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                                placeholder="Paste YouTube URLs here, one per line"
+                                disabled={isProcessing}
+                            />
+
+                            {showResults && (
+                                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                                    <p className="text-white/90 text-sm">
+                                        <span className="font-bold text-blue-400">{processedResults.success}</span> videos added successfully.
+                                    </p>
+                                    <p className="text-white/90 text-sm">
+                                        <span className="font-bold text-yellow-400">{processedResults.duplicates}</span> duplicates found.
+                                    </p>
+                                    <p className="text-white/90 text-sm">
+                                        <span className="font-bold text-red-400">{processedResults.failed}</span> failed to add.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-8 flex justify-between">
+                            <button
+                                onClick={() => setIsBulkAddModalOpen(false)}
+                                className="px-4 py-2 text-white/70 hover:text-white transition-colors"
+                                disabled={isProcessing}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={processBulkAdd}
+                                className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors ${
+                                    isProcessing ? 'opacity-70 cursor-not-allowed' : ''
+                                }`}
+                                disabled={isProcessing || !bulkUrls.trim()}
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Videos
                                     </>
                                 )}
                             </button>
