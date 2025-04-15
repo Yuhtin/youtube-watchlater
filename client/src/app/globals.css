@@ -15,6 +15,18 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  .glass-effect {
+    @apply backdrop-blur-xl backdrop-saturate-150 bg-white/10 border border-white/20;
+  }
+  
+  .glass-hover {
+    @apply transition-all duration-300 hover:bg-white/20 hover:shadow-lg;
+  }
+  
+  .glass-card {
+    @apply rounded-lg overflow-hidden shadow-md bg-white/10 border border-white/20 backdrop-blur-md;
+  }
 }
 
 @layer base {
@@ -138,4 +150,14 @@ body {
 [data-sonner-toast][data-type="loading"] {
   background-color: var(--loading-bg);
   border-color: var(--loading-border);
+}
+
+@keyframes glass-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.pulse-glass {
+  animation: glass-pulse 2s infinite;
 }

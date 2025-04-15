@@ -1005,7 +1005,7 @@ export default function WatchLaterPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-800 to-slate-900 p-6 md:p-10 bg-fixed">
+        <div className="min-h-screen bg-[url('/images/gradient-bg.jpg')] bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
                 position="top-center"
                 expand={false}
@@ -1020,7 +1020,7 @@ export default function WatchLaterPage() {
                 }}
             />
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 backdrop-blur-lg bg-white/5 border border-white/20 rounded-xl p-6 shadow-xl">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center">
                         <Youtube className="h-8 w-8 mr-3 text-red-500" />
@@ -1070,11 +1070,11 @@ export default function WatchLaterPage() {
                 </div>
             </div>
 
-            <div className="mb-10 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-xl overflow-hidden">
+            <div className="mb-10 backdrop-blur-xl bg-white/10 border border-white/30 rounded-xl shadow-xl overflow-hidden">
                 <div className="p-6">
                     <h2 className="text-xl font-semibold text-white mb-4">Add a new video!</h2>
                     <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-grow flex items-center bg-white/5 border border-white/10 rounded-lg overflow-hidden">
+                        <div className="flex-grow flex items-center bg-black/10 border border-white/20 rounded-lg overflow-hidden">
                             <span className="pl-3 text-red-400">
                                 <Youtube size={20} />
                             </span>
@@ -1093,13 +1093,13 @@ export default function WatchLaterPage() {
                         </div>
                         <button
                             onClick={addVideo}
-                            className="whitespace-nowrap bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg flex items-center justify-center"
+                            className="whitespace-nowrap bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg flex items-center justify-center border border-red-500/20 pulse-glass"
                         >
                             <Plus className="mr-2 h-5 w-5" /> Add Video
                         </button>
                         <button
                             onClick={() => setIsBulkAddModalOpen(true)}
-                            className="whitespace-nowrap bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center"
+                            className="whitespace-nowrap bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center border border-blue-500/20"
                         >
                             <List className="mr-2 h-5 w-5" /> Bulk Add
                         </button>
@@ -1126,22 +1126,26 @@ export default function WatchLaterPage() {
             >
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {Object.entries(columns).map(([columnKey, column]) => {
-                        const colorClasses = columnColors[columnKey as keyof typeof columnColors];
+                        const colorClasses = columnKey === 'WATCH_LATER'
+                            ? 'bg-blue-500/10 border-blue-300/30'
+                            : columnKey === 'WATCHING'
+                                ? 'bg-amber-500/10 border-amber-300/30'
+                                : 'bg-green-500/10 border-green-300/30';
                         const icon = columnIcons[columnKey as keyof typeof columnIcons];
 
                         return (
                             <div
                                 key={column.id}
-                                className={`bg-gradient-to-br ${colorClasses} backdrop-blur-lg border rounded-xl shadow-xl overflow-hidden`}
+                                className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden`}
                             >
-                                <div className="p-5 border-b border-white/10">
+                                <div className="p-5 border-b border-white/10 backdrop-blur-sm bg-black/10">
                                     <h2 className="text-xl font-bold text-white flex items-center justify-between">
                                         <span className="flex items-center">
                                             <span className="mr-2">{icon}</span>
                                             {column.title}
                                         </span>
                                         <span className="bg-white/20 text-white text-sm py-1 px-3 rounded-full">
-                                            {column.videos.filter(video => !!video.playlistId).length}
+                                            {column.videos.filter(video => !video.playlistId).length}
                                         </span>
                                     </h2>
                                 </div>
@@ -1189,7 +1193,7 @@ export default function WatchLaterPage() {
                 >
                     {activeId && activeVideo ? (
                         <div className="w-full" style={{ maxWidth: "300px" }}>
-                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-md">
+                            <div className="bg-white/15 backdrop-blur-xl border border-white/30 rounded-lg overflow-hidden shadow-xl">
                                 <div className="relative">
                                     <img
                                         src={activeVideo.thumbnailUrl}
@@ -1217,7 +1221,7 @@ export default function WatchLaterPage() {
                 <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl p-6 backdrop-blur-sm">
+                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl p-6">
                         <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
                             <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
                             Delete Account
@@ -1331,9 +1335,9 @@ export default function WatchLaterPage() {
                         <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
 
                         <div className="fixed inset-0 flex items-center justify-center p-4">
-                            <Dialog.Panel className="w-full max-w-5xl h-[80vh] rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl overflow-hidden backdrop-blur-sm">
+                            <Dialog.Panel className="w-full max-w-5xl h-[80vh] rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl overflow-hidden">
                                 <div className="h-full flex flex-col">
-                                    <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                                    <div className="p-5 border-b border-white/20 flex justify-between items-center bg-white/5 backdrop-blur-sm">
                                         <div className="flex items-center">
                                             <div className="w-12 h-12 rounded overflow-hidden mr-4">
                                                 <img
@@ -1356,7 +1360,7 @@ export default function WatchLaterPage() {
                                                     href={`https://www.youtube.com/playlist?list=${selectedPlaylist.id}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="ml-3 inline-flex items-center bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs px-3 py-1 rounded-full border border-red-500/20 shadow-lg transition-all"
+                                                    className="ml-3 inline-flex items-center backdrop-blur-md bg-red-500/40 hover:bg-red-500/60 text-white text-xs px-3 py-1 rounded-full border border-red-400/30 shadow-lg transition-all duration-300"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                     }}
@@ -1380,7 +1384,7 @@ export default function WatchLaterPage() {
                                             {Object.entries(columns).map(([key, column]) => (
                                                 <div
                                                     key={key}
-                                                    className="flex-shrink-0 w-72 h-full flex flex-col bg-white/5 rounded-lg overflow-hidden"
+                                                    className="flex-shrink-0 w-72 h-full flex flex-col bg-white/10 backdrop-blur-lg border border-white/20 rounded-lg overflow-hidden"
                                                 >
                                                     <div className="p-3 bg-white/5 border-b border-white/10">
                                                         <h3 className="text-white font-medium">{column.title}</h3>
@@ -1402,7 +1406,7 @@ export default function WatchLaterPage() {
                                                             }) => (
                                                                 <div
                                                                     key={card.id}
-                                                                    className="mb-3 bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden cursor-pointer hover:bg-white/20 transition-colors"
+                                                                    className="mb-3 backdrop-blur-md bg-white/10 border border-white/20 rounded-lg overflow-hidden cursor-pointer hover:bg-white/20 transition-all duration-300"
                                                                     onClick={() => {
                                                                         // Open the video and update its status
                                                                         window.open(card.url, "_blank");
@@ -1432,7 +1436,7 @@ export default function WatchLaterPage() {
                                                                             alt={card.title}
                                                                             className="w-full h-28 object-cover"
                                                                         />
-                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
 
                                                                         {card.addedAt && (
                                                                             <div className="absolute top-1 left-1 bg-black/70 text-white/70 text-xs px-1.5 py-0.5 rounded">
@@ -1517,7 +1521,7 @@ export default function WatchLaterPage() {
                 <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-xl p-6 backdrop-blur-sm">
+                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl p-6">
                         <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
                             <List className="h-5 w-5 text-blue-500 mr-2" />
                             Bulk Add Videos

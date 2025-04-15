@@ -19,9 +19,10 @@ interface SortableItemProps {
   status: string;
   onOpen: () => void;
   onRemove: () => void;
+  isPlaylist?: boolean;
 }
 
-export function SortableItem({ id, video, status, onOpen, onRemove }: SortableItemProps) {
+export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist }: SortableItemProps) {
   const {
     attributes,
     listeners,
@@ -57,9 +58,13 @@ export function SortableItem({ id, video, status, onOpen, onRemove }: SortableIt
     <div
       ref={setNodeRef}
       style={style}
+      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md ${
+        isPlaylist 
+          ? "bg-purple-500/20 border-2 border-purple-500/40" 
+          : "bg-white/10 border border-white/20"
+      } hover:bg-white/15 transition-all duration-300`}
       {...attributes}
       {...listeners}
-      className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-move group"
     >
       <div className="relative">
         <div className="relative">
