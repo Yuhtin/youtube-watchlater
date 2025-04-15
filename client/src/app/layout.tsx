@@ -9,7 +9,6 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "YouTube Watch Later Kanban",
   description: "Manage your YouTube watch later videos in a Kanban board",
-  // Simpler configuration for production environments
   icons: {
     icon: [
       { url: './favicon.ico' },

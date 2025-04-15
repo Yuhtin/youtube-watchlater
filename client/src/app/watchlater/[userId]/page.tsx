@@ -21,22 +21,6 @@ interface Video {
     isPlaylist?: boolean;
 }
 
-// Updated interface for cards that can be either videos or playlists
-interface Card {
-    id: string;
-    title: string;
-    thumbnailUrl: string;
-    url: string;
-    addedAt: number;
-    status: string;
-    updatedAt?: number;
-    isPlaylist?: boolean;
-    playlistId?: string;
-    _count?: {
-        cards?: number
-    };
-}
-
 enum ColumnType {
     WATCH_LATER = "WATCH_LATER",
     WATCHING = "WATCHING",
@@ -60,6 +44,56 @@ const getPlaylistStatus = (playlist: any) => {
     if (watchedCount === totalCount) return 'WATCHED';
     if (watchingCount > 0 || watchedCount > 0) return 'WATCHING';
     return 'WATCH_LATER';
+};
+
+const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; durationSeconds: number | null } | null> => {
+    try {
+        const existingResponse = await apiRequest(`/cards/${videoId}`);
+
+        if (existingResponse.status === 404) {
+            console.log(`Video ${videoId} not found in database, will try YouTube API`);
+        } else if (existingResponse.id === videoId) {
+            const existingData = await existingResponse.json();
+            if (existingData && existingData.title) {
+                return {
+                    title: existingData.title,
+                    durationSeconds: existingData.durationSeconds || null
+                };
+            }
+        }
+
+        if (!YOUTUBE_API_KEY) {
+            console.log("YouTube API key is missing");
+            return null;
+        }
+
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${YOUTUBE_API_KEY}`
+        );
+
+        if (!response.ok) {
+            if (response.status === 403) {
+                console.log("YouTube API key is invalid or rate limit exceeded");
+                return null;
+            }
+
+            return null;
+        }
+
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            const title = data.items[0].snippet.title;
+            const durationISO = data.items[0].contentDetails?.duration || null;
+            const durationSeconds = durationISO ? parseDuration(durationISO) : null;
+
+            return { title, durationSeconds };
+        }
+
+        return null;
+    } catch (error) {
+        console.log("Issue fetching video info:", error);
+        return null;
+    }
 };
 
 const parseDuration = (isoDuration: string): number => {
@@ -165,7 +199,6 @@ export default function WatchLaterPage() {
             }
 
             fetchColumns();
-            fetchPlaylists();
         } catch (error) {
             console.error('Invalid token:', error);
             localStorage.removeItem("token");
@@ -198,6 +231,7 @@ export default function WatchLaterPage() {
             });
 
             setColumns(columnsFromServer);
+            fetchPlaylists();
         } catch (error) {
             console.error("Failed to fetch columns:", error);
             toast.error("Failed to load videos", {
@@ -280,20 +314,43 @@ export default function WatchLaterPage() {
         const loadingToast = toast.loading("Adding video...");
 
         try {
+            const data = await fetchVideoInfo(id);
+            if (!data) {
+                toast.dismiss(loadingToast);
+                toast.error("Failed to fetch video info", {
+                    description: "Please check the URL and try again"
+                });
+                return;
+            }
+
+            const { title, durationSeconds } = data;
+
+            const newVideo = {
+                id,
+                title,
+                thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
+                url: `https://www.youtube.com/watch?v=${id}`,
+                status: "WATCH_LATER",
+                userId: userId,
+                durationSeconds: durationSeconds || null,
+            };
+
             const response = await apiRequest('/cards', {
                 method: "POST",
-                body: {
-                    id,
-                    url: `https://www.youtube.com/watch?v=${id}`,
-                    status: "WATCH_LATER",
-                    userId: userId,
-                },
+                body: newVideo,
             });
 
             if (response.statusCode === 409) {
                 toast.dismiss(loadingToast);
                 toast.warning("Video already in your collection", {
                     description: "This video already exists in your collection",
+                    action: {
+                        label: "View",
+                        onClick: () => {
+                            const existingStatus = response.data?.status || "WATCH_LATER";
+                            toast.info(`This video is in your ${columns[existingStatus]?.title || existingStatus} list`);
+                        }
+                    }
                 });
 
                 setVideoUrl("");
@@ -305,7 +362,9 @@ export default function WatchLaterPage() {
                 setVideoUrl("");
 
                 toast.dismiss(loadingToast);
-                toast.success("Video added successfully");
+                toast.success("Video added successfully", {
+                    description: title || `Video ${id}`
+                });
             } else {
                 console.error("Failed to add video:", response.message);
 
@@ -327,7 +386,6 @@ export default function WatchLaterPage() {
         try {
             const loadingToast = toast.loading("Removing...");
 
-            // Check if this is a playlist
             if (videoId.toString().startsWith('playlist-')) {
                 const playlistId = videoId.replace('playlist-', '');
                 const response = await apiRequest(`/playlists/${playlistId}`, {
@@ -336,7 +394,6 @@ export default function WatchLaterPage() {
 
                 if (response.success) {
                     fetchColumns();
-                    fetchPlaylists();
                     toast.dismiss(loadingToast);
                     toast.success("Playlist removed successfully");
                 } else {
@@ -345,7 +402,6 @@ export default function WatchLaterPage() {
                     toast.error("Failed to remove playlist");
                 }
             } else {
-                // Regular video removal
                 const response = await apiRequest(`/cards/${videoId}`, {
                     method: "DELETE",
                 });
@@ -399,6 +455,8 @@ export default function WatchLaterPage() {
 
     const extractVideoId = (url: string): { id: string | null; isPlaylist: boolean } => {
         if (!url) return { id: null, isPlaylist: false };
+
+        url = url.replace('✅', '').replace('❌', '').trim();
 
         const playlistRegExp = /^.*(youtube.com\/playlist\?|youtube.com\/watch\?.*[&?]list=|youtu.be\/.*[?&]list=)(?:.*&)?list=([^#&?]*).*/;
         const playlistMatch = url.match(playlistRegExp);
@@ -469,7 +527,6 @@ export default function WatchLaterPage() {
                 setSelectedPlaylist(fullPlaylist);
             }
         } else {
-            // Regular video handling
             if (status === "WATCH_LATER") {
                 moveVideo(video.id, ColumnType.WATCHING);
             }
@@ -713,8 +770,8 @@ export default function WatchLaterPage() {
                 toast.success(`Added ${addedCount} videos from playlist`, {
                     description: title
                 });
-                fetchColumns();
-                fetchPlaylists();
+
+                fetchColumns();                
             } else if (duplicateCount > 0 && addedCount === 0) {
                 toast.info("All videos from this playlist are already in your collection");
             } else {
@@ -743,7 +800,6 @@ export default function WatchLaterPage() {
         setIsDeleteModalOpen(true);
     };
 
-    // Handlers do kanban principal
     const handleMainDragStart = (event: any) => {
         const { active } = event;
         setActiveId(active.id);
@@ -767,7 +823,6 @@ export default function WatchLaterPage() {
         const activeId = active.id;
         const overId = over.id;
 
-        // Verifica se é uma playlist sendo arrastada
         const isPlaylist = activeId.toString().startsWith('playlist-');
         if (isPlaylist) {
             toast.error("You cannot move playlists manually, open them and move videos inside it");
@@ -813,7 +868,6 @@ export default function WatchLaterPage() {
         });
     };
 
-    // Function to check if drag should be disabled for an item
     const disableDragForMainBoard = (itemId: string) => {
         return itemId.toString().startsWith('playlist-');
     };
@@ -865,7 +919,6 @@ export default function WatchLaterPage() {
                             url: `https://www.youtube.com/playlist?list=${updatedPlaylistResponse.id}`,
                         });
 
-                        await fetchPlaylists();
                         await fetchColumns();
 
                         toast.dismiss(loadingToast);
@@ -934,7 +987,6 @@ export default function WatchLaterPage() {
                 }),
             }).then(() => {
                 fetchColumns();
-                fetchPlaylists();
             });
         };
 
@@ -956,8 +1008,8 @@ export default function WatchLaterPage() {
                     }).then(() => {
                         toast.dismiss(loadingToast);
                         toast.success("Video removed successfully");
+
                         fetchColumns();
-                        fetchPlaylists();
                     }).catch(() => {
                         toast.dismiss(loadingToast);
                         toast.error("Failed to remove video");
@@ -1075,7 +1127,6 @@ export default function WatchLaterPage() {
                 </div>
             </div>
 
-            {/* Kanban principal */}
             <KanbanBoard
                 columns={columns}
                 columnIcons={columnIcons}
@@ -1257,7 +1308,7 @@ export default function WatchLaterPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    // Show confirmation before delete
+
                                                     if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
                                                         removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.id}`);
                                                         setSelectedPlaylist(null);
@@ -1349,7 +1400,7 @@ export default function WatchLaterPage() {
 
                                     const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
 
-                                    Promise.all(urls.map(url => {
+                                    Promise.all(urls.map(async url => {
                                         const { id, isPlaylist } = extractVideoId(url.trim());
 
                                         if (!id || isPlaylist) {
@@ -1357,14 +1408,30 @@ export default function WatchLaterPage() {
                                             return Promise.resolve();
                                         }
 
+                                        const data = await fetchVideoInfo(id);
+                                        if (!data) {
+                                            toast.dismiss(loadingToast);
+                                            toast.error("Failed to fetch video info", {
+                                                description: "Please check the URL and try again"
+                                            });
+                                            return;
+                                        }
+
+                                        const { title, durationSeconds } = data;
+
+                                        const newVideo = {
+                                            id,
+                                            title,
+                                            thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
+                                            url: `https://www.youtube.com/watch?v=${id}`,
+                                            status: "WATCH_LATER",
+                                            userId: userId,
+                                            durationSeconds: durationSeconds || null,
+                                        };
+
                                         return apiRequest('/cards', {
                                             method: "POST",
-                                            body: {
-                                                id,
-                                                url: `https://www.youtube.com/watch?v=${id}`,
-                                                status: "WATCH_LATER",
-                                                userId: userId,
-                                            },
+                                            body: newVideo,
                                         }).then(response => {
                                             if (response.statusCode === 409) {
                                                 duplicateCount++;

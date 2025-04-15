@@ -39,7 +39,6 @@ export class CardController {
             return { statusCode: 403, message: 'Unauthorized access to other user data' };
         }
 
-        // Build filter criteria
         const filter: any = { userId };
 
         if (search) {

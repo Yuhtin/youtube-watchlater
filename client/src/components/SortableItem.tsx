@@ -105,7 +105,6 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
           </div>
         </div>
 
-        {/* Playlist indicator */}
         {isPlaylist && (
           <div className="absolute top-2 left-2 bg-purple-500/90 text-white rounded-md px-1.5 py-0.5 text-xs font-medium flex items-center">
             <ListVideo className="w-3 h-3 mr-1" /> 
@@ -113,7 +112,6 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
           </div>
         )}
 
-        {/* Duration badge */}
         {video.durationSeconds && video.durationSeconds > 0 && (
           <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs text-white px-2 py-1 rounded flex items-center">
             <Clock size={10} className="mr-1" />
@@ -121,14 +119,12 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
           </div>
         )}
 
-        {/* Date badge */}
         {video.addedAt && (
           <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white/80 px-2 py-1 rounded">
             {formatDate(video.addedAt)}
           </div>
         )}
 
-        {/* Delete button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
