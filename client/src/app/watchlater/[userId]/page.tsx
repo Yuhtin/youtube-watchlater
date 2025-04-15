@@ -1141,7 +1141,7 @@ export default function WatchLaterPage() {
                                             {column.title}
                                         </span>
                                         <span className="bg-white/20 text-white text-sm py-1 px-3 rounded-full">
-                                            {column.videos.length}
+                                            {column.videos.filter(video => !!video.playlistId).length}
                                         </span>
                                     </h2>
                                 </div>
