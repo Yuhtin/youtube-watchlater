@@ -1177,13 +1177,6 @@ export default function WatchLaterPage() {
                             <List className="mr-2 h-5 w-5" /> Bulk Add
                         </button>
                     </div>
-
-                    <div className="border-t border-white/5 my-6"></div>
-
-                    <FilterBar
-                        onChange={setFilters}
-                        initialFilters={filters}
-                    />
                 </div>
             </div>
 
@@ -1204,6 +1197,11 @@ export default function WatchLaterPage() {
                 disableDragFor={disableDragForMainBoard}
                 emptyStateMessage="No videos yet"
                 emptyStateSubMessage="Drag videos here or add new ones"
+            />
+
+            <FilterBar
+                onChange={setFilters}
+                initialFilters={filters}
             />
 
             <Dialog
