@@ -33,7 +33,8 @@ export const apiRequest = async (
     };
 
     if (body) {
-        requestOptions.body = body;
+        const isBodyString = typeof options.body === 'string';
+        requestOptions.body = (isBodyString ? options.body : JSON.stringify(options.body))
     }
 
     try {
