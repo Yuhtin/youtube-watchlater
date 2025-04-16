@@ -1470,7 +1470,7 @@ export default function WatchLaterPage() {
     }, [activeSettingsTab, calculateStats]);
 
     return (
-        <div className="min-h-screen bg-[url('/images/gradient-bg.jpg')] bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
+        <div className="min-h-screen bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
                 position="top-center"
                 expand={false}
@@ -1747,24 +1747,27 @@ export default function WatchLaterPage() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    setSelectedPlaylist(null);
+                                                }}
+                                                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors md:order-2"
+                                                title="Close"
+                                            >
+                                                <X className="h-5 w-5" />
+                                            </button>
+                                            
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
 
                                                     if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
                                                         removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.playlistId}`);
                                                         setSelectedPlaylist(null);
                                                     }
                                                 }}
-                                                className="text-white/70 hover:text-red-400 p-2 rounded-full hover:bg-white/10 mr-2 transition-colors"
+                                                className="text-white/70 hover:text-red-400 p-2 rounded-full hover:bg-white/10 mr-2 md:mr-0 md:order-1 transition-colors"
                                                 title="Delete playlist"
                                             >
                                                 <Trash2 className="h-5 w-5" />
-                                            </button>
-
-                                            <button
-                                                onClick={() => setSelectedPlaylist(null)}
-                                                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-                                                title="Close"
-                                            >
-                                                <X className="h-5 w-5" />
                                             </button>
                                         </div>
                                     </div>
