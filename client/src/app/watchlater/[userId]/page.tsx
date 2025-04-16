@@ -332,11 +332,12 @@ export default function WatchLaterPage() {
                 console.log(response);
                 setPlaylists(response);
 
-                const playlistCards = response.map((playlist: { id: any; title: any; thumbnailUrl: any; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
-                    id: `playlist-${playlist.id}`,
+                const playlistCards = response.map((playlist: { id: string; playlistId: string; title: string; thumbnailUrl: string; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
+                    id: playlist.id,
+                    playlistId: playlist.playlistId,
                     title: playlist.title,
                     thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
-                    url: `https://www.youtube.com/playlist?list=${playlist.id}`,
+                    url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`,
                     status: getPlaylistStatus(playlist),
                     addedAt: new Date(playlist.createdAt).getTime(),
                     isPlaylist: true,
@@ -358,6 +359,7 @@ export default function WatchLaterPage() {
                         }
                     });
 
+                    console.log(newColumns)
                     return newColumns;
                 });
             }
@@ -610,13 +612,13 @@ export default function WatchLaterPage() {
     };
 
     const getPlaylistById = (playlistId: string) => {
-        const playlist = playlists.find(p => p.id === playlistId);
+        const playlist = playlists.find(p => p.playlistId === playlistId);
         if (playlist) {
             return {
                 ...playlist,
                 status: getPlaylistStatus(playlist),
                 thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
-                url: `https://www.youtube.com/playlist?list=${playlist.id}`,
+                url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`,
             };
         }
 
@@ -803,7 +805,7 @@ export default function WatchLaterPage() {
             const playlistResponse = await apiRequest('/playlists', {
                 method: "POST",
                 body: {
-                    id: playlistId,
+                    playlistId: playlistId,
                     title,
                     thumbnailUrl,
                 },
@@ -956,6 +958,7 @@ export default function WatchLaterPage() {
     };
 
     const disableDragForMainBoard = (itemId: string) => {
+        console.log(itemId)
         return itemId.toString().startsWith('playlist-');
     };
 
@@ -994,7 +997,7 @@ export default function WatchLaterPage() {
                         status: "WATCHING"
                     }),
                 }).then(async () => {
-                    const playlistId = selectedPlaylist.id;
+                    const playlistId = selectedPlaylist.playlistId;
                     const updatedPlaylistResponse = await apiRequest(`/playlists/${playlistId}`);
 
                     if (updatedPlaylistResponse) {
@@ -1729,7 +1732,7 @@ export default function WatchLaterPage() {
                                             </div>
                                             <div>
                                                 <a
-                                                    href={`https://www.youtube.com/playlist?list=${selectedPlaylist.id}`}
+                                                    href={`https://www.youtube.com/playlist?list=${selectedPlaylist.playlistId}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="ml-3 inline-flex items-center backdrop-blur-md bg-red-500/40 hover:bg-red-500/60 text-white text-xs px-3 py-1 rounded-full border border-red-400/30 shadow-lg transition-all duration-300"
@@ -1749,7 +1752,7 @@ export default function WatchLaterPage() {
                                                     e.stopPropagation();
 
                                                     if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
-                                                        removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.id}`);
+                                                        removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.playlistId}`);
                                                         setSelectedPlaylist(null);
                                                     }
                                                 }}

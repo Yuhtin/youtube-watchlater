@@ -35,7 +35,7 @@ export class CardService {
             });
 
             if (data.playlistId) {
-                this.playlistService.calculatePlaylistDuration(data.playlistId);
+                this.playlistService.calculatePlaylistDuration(data.playlistId, data.userId);
             }
 
             return response;

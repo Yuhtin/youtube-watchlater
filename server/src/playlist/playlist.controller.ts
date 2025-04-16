@@ -10,6 +10,13 @@ export class PlaylistController {
     @UseGuards(JwtAuthGuard)
     @Post()
     async create(@Body() body: any, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+
         const result = await this.playlistService.create({
             ...body,
             userId: req.user.userId,
@@ -19,13 +26,20 @@ export class PlaylistController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @Patch(':id/status')
+    @Patch(':playlistId/status')
     async updatePlaylistStatus(
-        @Param('id') id: string,
+        @Param('playlistId') playlistId: string,
         @Body() body: { status: ColumnType },
         @Request() req
     ) {
-        await this.playlistService.updateCardsStatus(id, req.user.userId, body.status);
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+
+        await this.playlistService.updateCardsStatus(playlistId, req.user.userId, body.status);
 
         return {
             success: true,
@@ -36,26 +50,54 @@ export class PlaylistController {
     @UseGuards(JwtAuthGuard)
     @Get()
     findAllByUser(@Request() req) {
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+        
         return this.playlistService.findAllByUser(req.user.userId);
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get(':id')
-    async findOne(@Param('id') id: string) {
-        return this.playlistService.findOne(id);
+    @Get(':playlistId')
+    async findOne(@Param('playlistId') playlistId: string, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+
+        return this.playlistService.findOne(playlistId, req.user.userId);
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get(':id/status')
-    async getPlaylistStatus(@Param('id') id: string) {
-        const status = await this.playlistService.calculatePlaylistStatus(id);
+    @Get(':playlistId/status')
+    async getPlaylistStatus(@Param('playlistId') playlistId: string, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+
+        const status = await this.playlistService.calculatePlaylistStatus(playlistId, req.user.userId);
         return { status };
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete(':id')
-    async remove(@Param('id') id: string, @Request() req) {
-        const result = await this.playlistService.remove(id, req.user.userId);
+    @Delete(':playlistId')
+    async remove(@Param('playlistId') playlistId: string, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return {
+                statusCode: 401,
+                message: 'Unauthorized',
+            };
+        }
+
+        const result = await this.playlistService.remove(playlistId, req.user.userId);
         return {
             success: true,
             message: 'Playlist deleted',

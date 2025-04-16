@@ -10,7 +10,7 @@ export class PlaylistService {
         try {
             const existingPlaylist = await this.prisma.playlist.findFirst({
                 where: {
-                    id: data.id,
+                    playlistId: data.playlistId,
                     userId: data.userId
                 }
             });
@@ -24,7 +24,7 @@ export class PlaylistService {
             }
 
             return await this.prisma.playlist.create({
-                data: {
+                data: {                    
                     ...data,
                 },
             });
@@ -57,10 +57,10 @@ export class PlaylistService {
         });
     }
 
-    async findOne(id: string) {
+    async findOne(playlistId: string, userId: string) {
         return this.prisma.playlist.findUnique({
             where: {
-                id,
+                playlistId_userId: { playlistId, userId },
             },
             include: {
                 cards: {
@@ -72,10 +72,11 @@ export class PlaylistService {
         });
     }
 
-    async calculatePlaylistStatus(playlistId: string) {
+    async calculatePlaylistStatus(playlistId: string, userId: string) {
         const cards = await this.prisma.card.findMany({
             where: {
                 playlistId,
+                userId,
             },
             select: {
                 status: true,
@@ -113,10 +114,10 @@ export class PlaylistService {
         });
     }
 
-    async remove(id: string, userId: string) {
+    async remove(playlistId: string, userId: string) {
         const playlist = await this.prisma.playlist.findUnique({
             where: {
-                id,
+                playlistId_userId: { playlistId, userId },
             },
         });
 
@@ -136,13 +137,14 @@ export class PlaylistService {
 
         await this.prisma.card.deleteMany({
             where: {
-                playlistId: id,
+                playlistId,
+                userId,
             },
         });
 
         await this.prisma.playlist.delete({
             where: {
-                id,
+                id: playlist.id
             },
         });
 
@@ -152,10 +154,11 @@ export class PlaylistService {
         };
     }
 
-    async calculatePlaylistDuration(playlistId: string) {
+    async calculatePlaylistDuration(playlistId: string, userId: string) {
         const cards = await this.prisma.card.findMany({
             where: {
                 playlistId,
+                userId,
                 status: {
                     not: ColumnType.WATCHED,
                 },
@@ -171,7 +174,7 @@ export class PlaylistService {
 
         await this.prisma.playlist.update({
             where: {
-                id: playlistId,
+                playlistId_userId: { playlistId, userId },
             },
             data: {
                 durationSeconds: totalDuration,
