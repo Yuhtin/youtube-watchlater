@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List, Settings, LogOut, Camera, UploadCloud, Mail, Send, UserSearch, CheckCircle, XCircle, MessageSquare, ChevronRight, Clock, ArrowLeft, User } from "lucide-react";
+import { Plus, X, Youtube, Trash2, AlertCircle, ListVideo, Eye, EyeOff, List, Settings, LogOut, Camera, UploadCloud, Mail, Send, UserSearch, CheckCircle, XCircle, MessageSquare, Clock, ArrowLeft, User, BarChart2, PieChart, TrendingUp } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
@@ -10,6 +10,22 @@ import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
 import { formatDuration, getRandomColor } from "@/src/lib/utils";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title, TimeScale, TooltipItem } from 'chart.js';
+import { Pie, Line } from 'react-chartjs-2';
+import 'chartjs-adapter-date-fns';
+import { enUS } from 'date-fns/locale';
+
+ChartJS.register(
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    TimeScale
+);
 
 interface Video {
     id: string;
@@ -21,6 +37,7 @@ interface Video {
     updatedAt?: number;
     playlistId?: string;
     isPlaylist?: boolean;
+    durationSeconds?: number;
 }
 
 enum ColumnType {
@@ -93,6 +110,19 @@ const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; 
     } catch (error) {
         console.log("Issue fetching video info:", error);
         return null;
+    }
+};
+
+const formatTotalTime = (seconds: number): string => {
+    if (!seconds) return '0h 0m';
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else {
+        return `${minutes}m`;
     }
 };
 
@@ -169,6 +199,16 @@ export default function WatchLaterPage() {
     const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [sendingMessage, setSendingMessage] = useState(false);
+
+    const [progressData, setProgressData] = useState<{ date: string; count: number }[]>([]);
+    const [progressStartDate, setProgressStartDate] = useState('allTime');
+
+    const [statsData, setStatsData] = useState({
+        watchLaterCount: 0,
+        watchingCount: 0,
+        watchedCount: 0,
+        totalCount: 0
+    });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
@@ -1289,6 +1329,94 @@ export default function WatchLaterPage() {
         }
     };
 
+    const calculateStats = useCallback(() => {
+        const watchLaterCount = columns.WATCH_LATER.videos.filter(v => !v.isPlaylist).length;
+        const watchingCount = columns.WATCHING.videos.filter(v => !v.isPlaylist).length;
+        const watchedCount = columns.WATCHED.videos.filter(v => !v.isPlaylist).length;
+        const totalCount = watchLaterCount + watchingCount + watchedCount;
+
+        setStatsData({
+            watchLaterCount,
+            watchingCount,
+            watchedCount,
+            totalCount
+        });
+
+        calculateProgressData();
+    }, [columns]);
+
+    const calculateProgressData = useCallback(() => {
+        const watchedVideos = columns.WATCHED.videos.filter(v => !v.playlistId || v.isPlaylist);
+
+        const today = new Date();
+        let startDate: Date;
+
+        switch (progressStartDate) {
+            case 'last7days':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 7);
+                break;
+            case 'last30days':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - 30);
+                break;
+            case 'allTime':
+            default:
+                if (watchedVideos.length > 0) {
+                    const sortedByDate = [...watchedVideos].sort((a, b) =>
+                        (a.updatedAt || a.addedAt) - (b.updatedAt || b.addedAt)
+                    );
+                    startDate = new Date(sortedByDate[0].updatedAt || sortedByDate[0].addedAt);
+                } else {
+                    startDate = new Date(today);
+                    startDate.setMonth(today.getMonth() - 6);
+                }
+        }
+
+        const dateCountMap = new Map<string, number>();
+        const dailyData: { date: string; count: number }[] = [];
+
+        let currentDate = new Date(startDate);
+
+        while (currentDate <= today) {
+            const dateString = currentDate.toISOString().split('T')[0];
+            dateCountMap.set(dateString, 0);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        watchedVideos.forEach(video => {
+            const updateDate = new Date(video.updatedAt || video.addedAt);
+            if (updateDate >= startDate) {
+                const dateString = updateDate.toISOString().split('T')[0];
+                const count = dateCountMap.get(dateString) || 0;
+                dateCountMap.set(dateString, count + 1);
+            }
+        });
+
+        dateCountMap.forEach((count, date) => {
+            dailyData.push({ date, count });
+        });
+
+        dailyData.sort((a, b) => a.date.localeCompare(b.date));
+
+        let runningTotal = 0;
+        const cumulativeData = dailyData.map(item => {
+            runningTotal += item.count;
+            return {
+                date: item.date,
+                count: runningTotal
+            };
+        });
+
+        setProgressData(cumulativeData);
+    }, [columns, progressStartDate]);
+
+    useEffect(() => {
+        if (activeSettingsTab === "stats") {
+            calculateStats();
+        }
+    }, [activeSettingsTab, calculateStats]);
+
     return (
         <div className="min-h-screen bg-[url('/images/gradient-bg.jpg')] bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
@@ -1793,41 +1921,37 @@ export default function WatchLaterPage() {
                                     <Settings className="mr-2 h-5 w-5" />
                                     Settings
                                 </Dialog.Title>
-                                
+
                                 <div className="flex justify-center md:hidden mb-6">
                                     <Settings className="h-5 w-5 text-white" />
                                 </div>
-                            
+
                                 <div className="space-y-3">
                                     <button
                                         onClick={() => setActiveSettingsTab("profile")}
-                                        className={`w-full flex ${
-                                            activeSettingsTab === "profile"
-                                                ? "bg-white/10 text-white"
-                                                : "text-white/70 hover:text-white hover:bg-white/5"
-                                        } rounded-lg transition-colors ${
-                                            "px-0 md:px-3 py-2.5 md:py-2"
-                                        }`}
+                                        className={`w-full flex ${activeSettingsTab === "profile"
+                                            ? "bg-white/10 text-white"
+                                            : "text-white/70 hover:text-white hover:bg-white/5"
+                                            } rounded-lg transition-colors ${"px-0 md:px-3 py-2.5 md:py-2"
+                                            }`}
                                     >
                                         <div className="md:hidden w-full flex justify-center">
                                             <User className="w-5 h-5" />
                                         </div>
-                                        
+
                                         <div className="hidden md:flex items-center">
                                             <User className="w-4 h-4 mr-2" />
                                             <span className="text-sm">Profile</span>
                                         </div>
                                     </button>
-                            
+
                                     <button
                                         onClick={() => setActiveSettingsTab("inbox")}
-                                        className={`w-full flex ${
-                                            activeSettingsTab === "inbox"
-                                                ? "bg-white/10 text-white"
-                                                : "text-white/70 hover:text-white hover:bg-white/5"
-                                        } rounded-lg transition-colors relative ${
-                                            "px-0 md:px-3 py-2.5 md:py-2"
-                                        }`}
+                                        className={`w-full flex ${activeSettingsTab === "inbox"
+                                            ? "bg-white/10 text-white"
+                                            : "text-white/70 hover:text-white hover:bg-white/5"
+                                            } rounded-lg transition-colors relative ${"px-0 md:px-3 py-2.5 md:py-2"
+                                            }`}
                                     >
                                         <div className="md:hidden w-full flex justify-center">
                                             <Mail className="w-5 h-5" />
@@ -1837,7 +1961,8 @@ export default function WatchLaterPage() {
                                                 </span>
                                             )}
                                         </div>
-                                        
+
+
                                         <div className="hidden md:flex items-center justify-between w-full">
                                             <div className="flex items-center">
                                                 <Mail className="w-4 h-4 mr-2" />
@@ -1850,20 +1975,37 @@ export default function WatchLaterPage() {
                                             )}
                                         </div>
                                     </button>
+
+                                    <button
+                                        onClick={() => setActiveSettingsTab("stats")}
+                                        className={`w-full flex ${activeSettingsTab === "stats"
+                                            ? "bg-white/10 text-white"
+                                            : "text-white/70 hover:text-white hover:bg-white/5"
+                                            } rounded-lg transition-colors relative ${"px-0 md:px-3 py-2.5 md:py-2"
+                                            }`}
+                                    >
+                                        <div className="md:hidden w-full flex justify-center">
+                                            <BarChart2 className="w-5 h-5" />
+                                        </div>
+
+                                        <div className="hidden md:flex items-center">
+                                            <BarChart2 className="w-4 h-4 mr-2" />
+                                            <span className="text-sm">Statistics</span>
+                                        </div>
+                                    </button>
                                 </div>
-                            
+
                                 <div className="flex-grow"></div>
-                            
+
                                 <button
                                     onClick={logout}
-                                    className={`w-full flex mt-6 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/10 rounded-lg transition-colors ${
-                                        "px-0 md:px-3 py-3 md:py-2.5"
-                                    }`}
+                                    className={`w-full flex mt-6 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/10 rounded-lg transition-colors ${"px-0 md:px-3 py-3 md:py-2.5"
+                                        }`}
                                 >
                                     <div className="md:hidden w-full flex justify-center">
                                         <LogOut className="w-5 h-5" />
                                     </div>
-                                    
+
                                     <div className="hidden md:flex items-center">
                                         <LogOut className="w-4 h-4 mr-2" />
                                         <span className="text-sm">Sign out</span>
@@ -2436,6 +2578,333 @@ export default function WatchLaterPage() {
                                                             ))}
                                                     </div>
                                                 )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSettingsTab === "stats" && (
+                                    <div className="flex flex-col h-full">
+                                        <div className="bg-black/20 p-6 border-b border-white/10">
+                                            <h2 className="text-xl font-semibold text-white">Statistics</h2>
+                                            <p className="text-white/60 text-sm mt-1">
+                                                Track your viewing progress and video statistics
+                                            </p>
+                                        </div>
+
+                                        <div className="p-6 flex-grow overflow-y-auto">
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
+                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Total</h3>
+                                                    <p className="text-3xl font-bold text-white mt-2">{statsData.totalCount}</p>
+                                                </div>
+                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
+                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">In list</h3>
+                                                    <p className="text-3xl font-bold text-blue-400 mt-2">{statsData.watchLaterCount}</p>
+                                                </div>
+                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
+                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Watching</h3>
+                                                    <p className="text-3xl font-bold text-purple-400 mt-2">{statsData.watchingCount}</p>
+                                                </div>
+                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
+                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Watched</h3>
+                                                    <p className="text-3xl font-bold text-green-400 mt-2">{statsData.watchedCount}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
+                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                                                    <Clock className="w-4 h-4 mr-2" />
+                                                    Watch Time Statistics
+                                                </h3>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                                                        <h4 className="text-white/60 text-sm">Total Watch Time</h4>
+                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                            {formatTotalTime(statsData.watchedCount ? columns.WATCHED.videos.reduce((total, video) => total + (video.durationSeconds || 0), 0) : 0)}
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                                                        <h4 className="text-white/60 text-sm">Average Video Length</h4>
+                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                            {formatDuration(statsData.totalCount ?
+                                                                Math.round(
+                                                                    [...columns.WATCH_LATER.videos,
+                                                                    ...columns.WATCHING.videos,
+                                                                    ...columns.WATCHED.videos]
+                                                                        .filter(video => !video.isPlaylist)
+                                                                        .reduce((total, video) => total + (video.durationSeconds || 0), 0) /
+                                                                    statsData.totalCount
+                                                                ) : 0
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
+                                                        <h4 className="text-white/60 text-sm">Completion Rate</h4>
+                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                            {statsData.totalCount ? Math.round((statsData.watchedCount / statsData.totalCount) * 100) : 0}%
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
+                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                                                    <PieChart className="w-4 h-4 mr-2" />
+                                                    Video Distribution
+                                                </h3>
+
+                                                <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+                                                    <div className="h-64 w-full md:w-64">
+                                                        {statsData.totalCount > 0 ? (
+                                                            <Pie
+                                                                data={{
+                                                                    labels: ['Watch Later', 'Watching', 'Watched'],
+                                                                    datasets: [
+                                                                        {
+                                                                            data: [statsData.watchLaterCount, statsData.watchingCount, statsData.watchedCount],
+                                                                            backgroundColor: [
+                                                                                'rgba(59, 130, 246, 0.6)', // Blue
+                                                                                'rgba(139, 92, 246, 0.6)',  // Purple
+                                                                                'rgba(16, 185, 129, 0.6)'   // Green
+                                                                            ],
+                                                                            borderColor: [
+                                                                                'rgba(59, 130, 246, 1)',
+                                                                                'rgba(139, 92, 246, 1)',
+                                                                                'rgba(16, 185, 129, 1)'
+                                                                            ],
+                                                                            borderWidth: 1,
+                                                                        },
+                                                                    ],
+                                                                }}
+                                                                options={{
+                                                                    responsive: true,
+                                                                    plugins: {
+                                                                        legend: {
+                                                                            position: 'bottom',
+                                                                            labels: {
+                                                                                color: 'rgba(255, 255, 255, 0.7)'
+                                                                            }
+                                                                        },
+                                                                        tooltip: {
+                                                                            callbacks: {
+                                                                                label: function (tooltipItem: TooltipItem<"pie">) {
+                                                                                    const label = tooltipItem.label || '';
+                                                                                    const value = typeof tooltipItem.raw === 'number' ? tooltipItem.raw : 0;
+                                                                                    const percentage = statsData.totalCount
+                                                                                        ? Math.round((value / statsData.totalCount) * 100)
+                                                                                        : 0;
+                                                                                    return `${label}: ${value} (${percentage}%)`;
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-white/40">
+                                                                No data to display
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="md:flex-1">
+                                                        <div className="space-y-3">
+                                                            <div>
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <span className="text-sm text-white/70 flex items-center">
+                                                                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                                                                        Watch Later
+                                                                    </span>
+                                                                    <span className="text-sm font-medium text-white">
+                                                                        {statsData.totalCount > 0
+                                                                            ? Math.round((statsData.watchLaterCount / statsData.totalCount) * 100)
+                                                                            : 0}%
+                                                                    </span>
+                                                                </div>
+                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-blue-500 rounded-full"
+                                                                        style={{
+                                                                            width: `${statsData.totalCount > 0
+                                                                                ? (statsData.watchLaterCount / statsData.totalCount) * 100
+                                                                                : 0}%`
+                                                                        }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <span className="text-sm text-white/70 flex items-center">
+                                                                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                                                                        Watching
+                                                                    </span>
+                                                                    <span className="text-sm font-medium text-white">
+                                                                        {statsData.totalCount > 0
+                                                                            ? Math.round((statsData.watchingCount / statsData.totalCount) * 100)
+                                                                            : 0}%
+                                                                    </span>
+                                                                </div>
+                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-purple-500 rounded-full"
+                                                                        style={{
+                                                                            width: `${statsData.totalCount > 0
+                                                                                ? (statsData.watchingCount / statsData.totalCount) * 100
+                                                                                : 0}%`
+                                                                        }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div className="flex justify-between items-center mb-1">
+                                                                    <span className="text-sm text-white/70 flex items-center">
+                                                                        <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                                                        Watched
+                                                                    </span>
+                                                                    <span className="text-sm font-medium text-white">
+                                                                        {statsData.totalCount > 0
+                                                                            ? Math.round((statsData.watchedCount / statsData.totalCount) * 100)
+                                                                            : 0}%
+                                                                    </span>
+                                                                </div>
+                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className="h-full bg-green-500 rounded-full"
+                                                                        style={{
+                                                                            width: `${statsData.totalCount > 0
+                                                                                ? (statsData.watchedCount / statsData.totalCount) * 100
+                                                                                : 0}%`
+                                                                        }}
+                                                                    ></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
+                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                                                    <TrendingUp className="w-4 h-4 mr-2" />
+                                                    Watched Videos Progress
+                                                </h3>
+
+                                                <div className="mb-4 flex gap-2">
+                                                    <button
+                                                        onClick={() => setProgressStartDate('last7days')}
+                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'last7days'
+                                                            ? 'bg-white/20 text-white'
+                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        Last 7 days
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setProgressStartDate('last30days')}
+                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'last30days'
+                                                            ? 'bg-white/20 text-white'
+                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        Last 30 days
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setProgressStartDate('allTime')}
+                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'allTime'
+                                                            ? 'bg-white/20 text-white'
+                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        All time
+                                                    </button>
+                                                </div>
+
+                                                <div className="relative h-64">
+                                                    {progressData.length > 0 ? (
+                                                        <Line
+                                                            data={{
+                                                                labels: progressData.map(item => item.date),
+                                                                datasets: [
+                                                                    {
+                                                                        label: 'Watched Videos',
+                                                                        data: progressData.map(item => item.count),
+                                                                        borderColor: 'rgba(16, 185, 129, 1)',
+                                                                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                                        fill: true,
+                                                                        tension: 0.4,
+                                                                    }
+                                                                ]
+                                                            }}
+                                                            options={{
+                                                                responsive: true,
+                                                                scales: {
+                                                                    x: {
+                                                                        type: 'time',
+                                                                        time: {
+                                                                            unit: progressStartDate === 'last7days' ? 'day' :
+                                                                                progressStartDate === 'last30days' ? 'week' : 'month',
+                                                                            tooltipFormat: 'MMM d, yyyy',
+                                                                            displayFormats: {
+                                                                                day: 'MMM d',
+                                                                                week: 'MMM d',
+                                                                                month: 'MMM yyyy'
+                                                                            }
+                                                                        },
+                                                                        adapters: {
+                                                                            date: {
+                                                                                locale: enUS
+                                                                            }
+                                                                        },
+                                                                        grid: {
+                                                                            color: 'rgba(255, 255, 255, 0.05)'
+                                                                        },
+                                                                        ticks: {
+                                                                            color: 'rgba(255, 255, 255, 0.5)'
+                                                                        }
+                                                                    },
+                                                                    y: {
+                                                                        beginAtZero: true,
+                                                                        grid: {
+                                                                            color: 'rgba(255, 255, 255, 0.05)'
+                                                                        },
+                                                                        ticks: {
+                                                                            precision: 0,
+                                                                            color: 'rgba(255, 255, 255, 0.5)'
+                                                                        }
+                                                                    }
+                                                                },
+                                                                plugins: {
+                                                                    legend: {
+                                                                        display: false
+                                                                    },
+                                                                    tooltip: {
+                                                                        callbacks: {
+                                                                            title: function (context) {
+                                                                                const date = new Date(context[0].label);
+                                                                                return date.toLocaleDateString(undefined, {
+                                                                                    year: 'numeric',
+                                                                                    month: 'long',
+                                                                                    day: 'numeric'
+                                                                                });
+                                                                            },
+                                                                            label: function (context) {
+                                                                                return `Total Watched: ${context.raw}`;
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center text-white/40">
+                                                            No progress data available
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

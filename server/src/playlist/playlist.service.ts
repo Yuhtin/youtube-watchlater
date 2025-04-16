@@ -169,8 +169,6 @@ export class PlaylistService {
       return acc + (card.durationSeconds || 0);
     }, 0);
 
-    console.log('Total Duration:', totalDuration);
-
     await this.prisma.playlist.update({
       where: {
         id: playlistId,
