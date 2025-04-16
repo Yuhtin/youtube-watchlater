@@ -430,7 +430,7 @@ export default function WatchLaterPage() {
             const { title, durationSeconds } = data;
 
             const newVideo = {
-                id,
+                videoId: id,
                 title,
                 thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
                 url: `https://www.youtube.com/watch?v=${id}`,
@@ -1862,7 +1862,7 @@ export default function WatchLaterPage() {
                                         const { title, durationSeconds } = data;
 
                                         const newVideo = {
-                                            id,
+                                            videoId: id,
                                             title,
                                             thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
                                             url: `https://www.youtube.com/watch?v=${id}`,
