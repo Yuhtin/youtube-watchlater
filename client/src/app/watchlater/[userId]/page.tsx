@@ -1267,30 +1267,81 @@ export default function WatchLaterPage() {
                 body: { read: true, accepted: true }
             });
 
-            const newVideo = {
-                id: suggestion.videoId,
-                title: suggestion.videoTitle,
-                thumbnailUrl: suggestion.videoThumbnail,
-                url: `https://www.youtube.com/watch?v=${suggestion.videoId}`,
-                status: "WATCH_LATER",
-                userId: userId,
-                durationSeconds: suggestion.videoDuration || null,
-            };
-
-            await apiRequest('/cards', {
-                method: "POST",
-                body: newVideo,
-            });
-
-            toast.dismiss(loadingToast);
-            toast.success("Video added to your collection");
-
             fetchSuggestions();
-            fetchColumns();
+
+            try {                
+                let id = suggestion.videoId;
+                let title = suggestion.videoTitle;
+                let durationSeconds = suggestion.videoDuration || null;
+                let thumbnailUrl = suggestion.videoThumbnail || `https://img.youtube.com/vi/${id}/0.jpg`;
+                let url = `https://www.youtube.com/watch?v=${id}`;
+                let status = "WATCH_LATER";
+
+                const newVideo = {
+                    id,
+                    title,
+                    thumbnailUrl,
+                    url,
+                    status,
+                    userId,
+                    durationSeconds,
+                };
+    
+                const response = await apiRequest('/cards', {
+                    method: "POST",
+                    body: newVideo,
+                });
+    
+                if (response.statusCode === 409) {
+                    toast.dismiss(loadingToast);
+                    toast.warning("Video already in your collection", {
+                        description: "This video already exists in your collection",
+                        action: {
+                            label: "View",
+                            onClick: () => {
+                                const existingStatus = response.data?.status || "WATCH_LATER";
+                                toast.info(`This video is in your ${columns[existingStatus]?.title || existingStatus} list`);
+                            }
+                        }
+                    });
+    
+                    setVideoUrl("");
+                    return;
+                }
+    
+                if (!response.statusCode) {
+                    fetchColumns();
+                    setVideoUrl("");
+    
+                    toast.dismiss(loadingToast);
+                    toast.success("Suggestion added to your Watch Later successfully", {
+                        description: title || `Video ${id}`
+                    });
+                } else {
+                    console.error("Failed to add video:", response.message);
+    
+                    toast.dismiss(loadingToast);
+                    toast.error(response.message || "Failed to add video", {
+                        description: "Please try again later"
+                    });
+
+                    fetchColumns();
+                }
+            } catch (error) {            
+                console.error("Failed to add video:", error);
+                toast.dismiss(loadingToast);
+                toast.error("Error adding video", {
+                    description: "An unexpected error occurred"
+                });
+
+                fetchColumns();
+            }
         } catch (error) {
             console.error("Error accepting suggestion:", error);
             toast.dismiss(loadingToast);
             toast.error("Failed to add video");
+
+            fetchColumns();
         }
     };
 
