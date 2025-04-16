@@ -131,4 +131,31 @@ export class UserService {
             throw error;
         }
     }
+
+    async updateUser(id: string, updateData: any) {
+        if (updateData.password) {
+            updateData.password = await bcrypt.hash(updateData.password, 10);
+        }
+        
+        const user = await this.prisma.user.update({
+            where: { id },
+            data: updateData
+        });
+        
+        const { password, ...result } = user;
+        return result;
+    }
+
+    async findByUsername(username: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { username }
+        });
+        
+        if (!user) {
+            return null;
+        }
+        
+        const { password, ...result } = user;
+        return result;
+    }
 }

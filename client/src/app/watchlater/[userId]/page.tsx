@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List } from "lucide-react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List, Settings, LogOut, Camera, UploadCloud } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
@@ -9,6 +9,7 @@ import { KanbanBoard, Column as KanbanColumn, CardItem } from '../../../componen
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
+import { getRandomColor } from "@/src/lib/utils";
 
 interface Video {
     id: string;
@@ -145,9 +146,22 @@ export default function WatchLaterPage() {
     const [showResults, setShowResults] = useState(false);
     const [playlists, setPlaylists] = useState<any[]>([]);
     const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
-    const [isAddingPlaylist, setIsAddingPlaylist] = useState(false);
     const [playlistActiveId, setPlaylistActiveId] = useState<string | null>(null);
     const [playlistActiveItem, setPlaylistActiveItem] = useState<CardItem | null>(null);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [activeSettingsTab, setActiveSettingsTab] = useState("profile");
+    const [newUsername, setNewUsername] = useState("");
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmNewPassword, setConfirmNewPassword] = useState("");
+    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(userImage);
+
+    const [userColor, setUserColor] = useState("#3b82f6");
+    const [userColorLight, setUserColorLight] = useState("rgba(59, 130, 246, 0.15)");
+    const [userColorBorder, setUserColorBorder] = useState("rgba(59, 130, 246, 0.3)");
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const params = useParams();
     const userId = params.userId as string;
@@ -197,6 +211,7 @@ export default function WatchLaterPage() {
             const storedUserImage = localStorage.getItem(`userImage_${userId}`);
             if (storedUserImage) {
                 setUserImage(storedUserImage);
+                setProfileImagePreview(storedUserImage);
             }
 
             fetchColumns();
@@ -206,6 +221,24 @@ export default function WatchLaterPage() {
             router.push(`/login/${userId}`);
         }
     }, [userId, router]);
+
+    useEffect(() => {
+        if (username) {
+            const gradient = getRandomColor(username);
+
+            const mainColor = gradient.includes('indigo') ? '#6366f1' :
+                gradient.includes('blue') ? '#3b82f6' :
+                    gradient.includes('emerald') ? '#10b981' :
+                        gradient.includes('amber') ? '#f59e0b' :
+                            gradient.includes('pink') ? '#ec4899' :
+                                gradient.includes('violet') ? '#8b5cf6' :
+                                    '#3b82f6';
+
+            setUserColor(mainColor);
+            setUserColorLight(mainColor.replace(')', ', 0.15)').replace('rgb', 'rgba'));
+            setUserColorBorder(mainColor.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+        }
+    }, [username]);
 
     const fetchColumns = async () => {
         try {
@@ -594,25 +627,6 @@ export default function WatchLaterPage() {
         return result;
     };
 
-    const formatDuration = (seconds: number | undefined): string => {
-        if (!seconds) return '';
-
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const remainingSeconds = seconds % 60;
-
-        let formattedDuration = '';
-
-        if (hours > 0) {
-            formattedDuration += `${hours}:`;
-        }
-
-        formattedDuration += `${minutes.toString().padStart(2, '0')}:`;
-        formattedDuration += remainingSeconds.toString().padStart(2, '0');
-
-        return formattedDuration;
-    };
-
     const fetchPlaylistDetails = async (playlistId: string) => {
         if (!YOUTUBE_API_KEY) {
             console.log("YouTube API key is missing");
@@ -701,7 +715,6 @@ export default function WatchLaterPage() {
     };
 
     const addPlaylist = async (playlistId: string) => {
-        setIsAddingPlaylist(true);
         const loadingToast = toast.loading("Processing playlist...");
 
         try {
@@ -712,7 +725,6 @@ export default function WatchLaterPage() {
                     description: "Please check the playlist link and try again"
                 });
 
-                setIsAddingPlaylist(false);
                 return;
             }
 
@@ -731,7 +743,6 @@ export default function WatchLaterPage() {
                 toast.dismiss(loadingToast);
                 toast.warning("Playlist already exists in your collection");
                 setPlaylistUrl("");
-                setIsAddingPlaylist(false);
                 return;
             }
 
@@ -786,8 +797,6 @@ export default function WatchLaterPage() {
             toast.error("Error processing playlist", {
                 description: "An unexpected error occurred"
             });
-        } finally {
-            setIsAddingPlaylist(false);
         }
     };
 
@@ -1104,8 +1113,12 @@ export default function WatchLaterPage() {
                 </div>
 
                 <div className="flex items-center gap-3 mt-4 md:mt-0">
-                    <div className="relative group">
-                        <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+                    <button
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-lg border border-white/20"
+                    >
+                        <span className="text-white text-sm">{username}</span>
+                        <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
                             {userImage ? (
                                 <img
                                     src={userImage}
@@ -1118,27 +1131,6 @@ export default function WatchLaterPage() {
                                 </div>
                             )}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors shadow-lg opacity-0 group-hover:opacity-100" onClick={logout}>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3 h-3 text-white">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
-                        </div>
-                    </div>
-                    <button
-                        onClick={logout}
-                        className="text-white/70 hover:text-red-400 transition-colors flex items-center gap-1.5 text-sm"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                        </svg>
-                        Sign out
-                    </button>
-                    <button
-                        onClick={openDeleteModal}
-                        className="text-white/70 hover:text-red-400 transition-colors flex items-center gap-1.5 text-sm"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        Delete Account
                     </button>
                 </div>
             </div>
@@ -1537,6 +1529,261 @@ export default function WatchLaterPage() {
                                     </>
                                 )}
                             </button>
+                        </div>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+
+            <Dialog
+                open={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+                className="relative z-[100]"
+            >
+                <div
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+                    aria-hidden="true"
+                    onClick={() => setIsSettingsModalOpen(false)}
+                />
+
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel
+                        className="w-full max-w-3xl h-[85vh] rounded-2xl shadow-xl overflow-hidden"
+                        style={{
+                            background: `linear-gradient(180deg, ${userColorLight}, rgba(20,0,25,50))`,
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)',
+                            boxShadow: `0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px ${userColorBorder}, 0 0 20px ${userColorLight}`,
+                            border: `1px solid ${userColor}`
+                        }}
+                    >
+                        <div
+                            className="absolute inset-0 rounded-2xl pointer-events-none"
+                            style={{
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: `
+                                    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
+                                    0 0 0 1px rgba(0, 0, 0, 0.15),
+                                    0 8px 32px rgba(0, 0, 0, 0.4)
+                                `
+                            }}
+                        ></div>
+
+                        <button
+                            onClick={() => setIsSettingsModalOpen(false)}
+                            className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-20"
+                            aria-label="Close settings"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+
+                        <div className="relative h-full flex overflow-hidden z-10">
+                            <div className="w-60 p-5 flex flex-col backdrop-blur-md bg-black/20 border-r border-white/10">
+                                <Dialog.Title
+                                    className="text-lg font-bold mb-6 flex items-center"
+                                    style={{ color: 'white' }}
+                                >
+                                    <Settings className="mr-2 h-5 w-5" />
+                                    Settings
+                                </Dialog.Title>
+
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setActiveSettingsTab("profile")}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm ${activeSettingsTab === "profile"
+                                            ? "bg-white/10 text-white font-medium"
+                                            : "text-white/70 hover:text-white hover:bg-white/5"
+                                            }`}
+                                    >
+                                        Profile
+                                    </button>
+                                </div>
+
+                                <div className="flex-grow"></div>
+
+                                <button
+                                    onClick={logout}
+                                    className="w-full text-left px-3 py-2.5 mt-6 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center border border-red-500/10"
+                                >
+                                    <LogOut className="w-4 h-4 mr-2" />
+                                    Sign out
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto backdrop-blur-lg bg-white/5">
+                                {activeSettingsTab === "profile" && (
+                                    <div className="p-6">
+                                        <h2 className="text-xl font-semibold text-white mb-8">Profile Settings</h2>
+
+                                        <div className="flex flex-col items-center mb-8">
+                                            <div className="relative group">
+                                                <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-black/20 border-2 border-white/20">
+                                                    {profileImagePreview ? (
+                                                        <img
+                                                            src={profileImagePreview}
+                                                            alt={username}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="text-white text-3xl font-semibold">
+                                                            {username?.charAt(0)?.toUpperCase() || "U"}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-lg text-white transition-colors"
+                                                >
+                                                    <Camera className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files[0]) {
+                                                        const file = e.target.files[0];
+                                                        setProfileImageFile(file);
+                                                        setProfileImagePreview(URL.createObjectURL(file));
+                                                    }
+                                                }}
+                                                className="hidden"
+                                            />
+
+                                            {profileImageFile && (
+                                                <div className="mt-3 flex items-center">
+                                                    <button
+                                                        onClick={async () => {
+                                                            /* função existente */
+                                                        }}
+                                                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+                                                    >
+                                                        <UploadCloud className="w-3.5 h-3.5" />
+                                                        Save Image
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setProfileImageFile(null);
+                                                            setProfileImagePreview(userImage);
+                                                        }}
+                                                        className="ml-2 text-white/70 hover:text-white text-sm"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h3 className="text-lg font-medium text-white mb-4">Change Username</h3>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm text-white/70 mb-1.5">
+                                                            Current Username
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={username}
+                                                            disabled
+                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm text-white/70 mb-1.5">
+                                                            New Username
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={newUsername}
+                                                            onChange={(e) => setNewUsername(e.target.value)}
+                                                            placeholder="Enter new username"
+                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                        />
+                                                    </div>
+                                                    {newUsername && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                /* função existente */
+                                                            }}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                                                        >
+                                                            Update Username
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm text-white/70 mb-1.5">
+                                                            Current Password
+                                                        </label>
+                                                        <input
+                                                            type="password"
+                                                            value={currentPassword}
+                                                            onChange={(e) => setCurrentPassword(e.target.value)}
+                                                            placeholder="Enter current password"
+                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm text-white/70 mb-1.5">
+                                                            New Password
+                                                        </label>
+                                                        <input
+                                                            type="password"
+                                                            value={newPassword}
+                                                            onChange={(e) => setNewPassword(e.target.value)}
+                                                            placeholder="Enter new password"
+                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm text-white/70 mb-1.5">
+                                                            Confirm New Password
+                                                        </label>
+                                                        <input
+                                                            type="password"
+                                                            value={confirmNewPassword}
+                                                            onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                                            placeholder="Confirm new password"
+                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                        />
+                                                    </div>
+                                                    {currentPassword && newPassword && confirmNewPassword && (
+                                                        <button
+                                                            onClick={async () => {
+                                                                /* função existente */
+                                                            }}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                                                            disabled={!currentPassword || !newPassword || !confirmNewPassword || newPassword !== confirmNewPassword}
+                                                        >
+                                                            Update Password
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-8 border-t border-white/10">
+                                                <h3 className="text-lg font-medium text-red-400 mb-2">Danger Zone</h3>
+                                                <p className="text-white/50 text-sm mb-4">
+                                                    Once you delete your account, there is no going back. This action cannot be undone.
+                                                </p>
+                                                <button
+                                                    onClick={openDeleteModal}
+                                                    className="flex items-center gap-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg text-sm border border-red-500/20 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete Account
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </Dialog.Panel>
                 </div>

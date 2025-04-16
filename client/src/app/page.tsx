@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import Image from "next/image";
 import CreateUserModal from "../components/CreateUserModal";
+import { getRandomColor } from "../lib/utils";
 
 interface User {
     id: string;
@@ -126,24 +127,6 @@ export default function HomePage() {
     const handleCreateSuccess = () => {
         fetchUsers();
         setIsModalOpen(false);
-    };
-
-    const getRandomColor = (username: string) => {
-        const colors = [
-            "from-indigo-400 to-purple-600",
-            "from-blue-400 to-cyan-600",
-            "from-emerald-400 to-teal-600",
-            "from-amber-400 to-orange-600",
-            "from-pink-400 to-rose-600",
-            "from-violet-400 to-purple-600",
-        ];
-
-        let hash = 0;
-        for (let i = 0; i < username.length; i++) {
-            hash += username.charCodeAt(i);
-        }
-
-        return colors[hash % colors.length];
     };
 
     const filteredUsers = users.filter(user =>

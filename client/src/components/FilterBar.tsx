@@ -91,9 +91,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   return (
     <>
-      {/* Botão flutuante */}
       <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
-        {/* Badges de filtros ativos - aparecem acima do botão */}
         {(activeFilterCount > 0) && (
           <div className="mb-3 flex flex-col items-end gap-2">
             {filters.search && (
@@ -134,7 +132,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </div>
         )}
         
-        {/* Botão redondo */}
         <button 
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 flex items-center justify-center text-white shadow-xl transition-all duration-200 hover:scale-105"
@@ -148,7 +145,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </button>
       </div>
 
-      {/* Modal com as opções de filtro */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="bg-zinc-900/95 backdrop-blur-xl border border-white/20 text-white p-6 shadow-xl rounded-xl sm:max-w-md">
           <div className="flex flex-col gap-6">
@@ -162,7 +158,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </button>
             </div>
             
-            {/* Barra de busca */}
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
                 <Search size={18} />
@@ -177,7 +172,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               />
             </div>
             
-            {/* Filtro por duração */}
             <div>
               <h4 className="text-sm font-medium mb-3 flex items-center">
                 <Clock size={14} className="mr-2" /> Video Duration
@@ -199,11 +193,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               </div>
             </div>
             
-            {/* Ordenação */}
             <div>
               <h4 className="text-sm font-medium mb-3">Sort By</h4>
               <div className="flex gap-3">
-                {/* Botão para ordenar por data */}
                 <button
                   onClick={toggleDateSort}
                   className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-sm flex-1 ${
@@ -218,7 +210,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   {filters.sortOrder === 'oldest' && <ArrowUp size={16} />}
                 </button>
                 
-                {/* Botão para ordenar por duração */}
                 <button
                   onClick={toggleDurationSort}
                   className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-sm flex-1 ${

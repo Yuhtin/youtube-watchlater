@@ -28,21 +28,23 @@ interface SortableItemProps {
 
 const formatDuration = (seconds: number | undefined): string => {
   if (!seconds) return '';
-  
+
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = seconds % 60;
-  
+
   if (hours > 0) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
-  
+
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
 
-const formatDate = (timestamp: number | undefined): string => {
-  if (!timestamp) return '';
-  return new Date(timestamp).toLocaleDateString();
+const formatDate = (timestamp: number) => {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, disabled = false }: SortableItemProps) {
@@ -53,7 +55,7 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id,
     disabled,
     data: {
@@ -75,11 +77,10 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${
-        isPlaylist 
-          ? "bg-purple-500/20 border-2 border-purple-500/40" 
+      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${isPlaylist
+          ? "bg-purple-500/20 border-2 border-purple-500/40"
           : "bg-white/10 border border-white/20"
-      } hover:bg-white/15 transition-all duration-300`}
+        } hover:bg-white/15 transition-all duration-300`}
       {...(disabled ? {} : attributes)}
       {...(disabled ? {} : listeners)}
     >
@@ -107,7 +108,7 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
 
         {isPlaylist && (
           <div className="absolute top-2 left-2 bg-purple-500/90 text-white rounded-md px-1.5 py-0.5 text-xs font-medium flex items-center">
-            <ListVideo className="w-3 h-3 mr-1" /> 
+            <ListVideo className="w-3 h-3 mr-1" />
             Playlist • {video._count?.cards || 0} videos
           </div>
         )}
@@ -154,7 +155,7 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
           </div>
         </div>
       </div>
-      
+
       {disabled && isPlaylist && (
         <div className="absolute top-0 left-0 w-full h-full bg-black/10 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={onOpen}>
           <div className="bg-black/50 px-2 py-1 rounded text-xs text-white">

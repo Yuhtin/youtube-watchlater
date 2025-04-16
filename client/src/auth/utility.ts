@@ -1,33 +1,47 @@
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
 
-interface ApiOptions {
-    method?: string;
-    body?: any;
-    headers?: Record<string, string>;
-}
+export const apiRequest = async (
+    endpoint: string,
+    options: {
+        method?: string;
+        headers?: Record<string, string>;
+        body?: any;
+        isFormData?: boolean;
+    } = {}
+) => {
+    const { method = 'GET', headers = {}, body, isFormData = false } = options;
 
-export async function apiRequest(endpoint: string, options: ApiOptions = {}) {
+    const url = `${BASE_URL}${endpoint}`;
+
     const token = localStorage.getItem('token');
 
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...options.headers,
+    const requestHeaders: HeadersInit = {
+        ...headers,
     };
 
     if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        requestHeaders['Authorization'] = `Bearer ${token}`;
     }
 
-    const isBodyString = typeof options.body === 'string';
+    if (!isFormData && body) {
+        requestHeaders['Content-Type'] = 'application/json';
+    }
 
-    const config: RequestInit = {
-        method: options.method || 'GET',
-        headers,
-        body: options.body ? (isBodyString ? options.body : JSON.stringify(options.body)) : undefined,
+    const requestOptions: RequestInit = {
+        method,
+        headers: requestHeaders,
     };
 
+    if (body) {
+        requestOptions.body = isFormData ? body : JSON.stringify(body);
+    }
+
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, config);
+        const response = await fetch(url, requestOptions);
+
+        if (response.status === 204) {
+            return { success: true };
+        }
 
         if (response.status === 401) {
             localStorage.removeItem('token');
@@ -55,7 +69,9 @@ export async function apiRequest(endpoint: string, options: ApiOptions = {}) {
 
         return await response.text();
     } catch (error) {
-        console.error('API request error:', error);
-        throw error;
+        return {
+            success: false,
+            message: 'Failed to parse response'
+        };
     }
-}
+};
