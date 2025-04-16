@@ -33,7 +33,7 @@ export const apiRequest = async (
     };
 
     if (body) {
-        requestOptions.body = isFormData ? body : JSON.stringify(body);
+        requestOptions.body = body;
     }
 
     try {
