@@ -55,13 +55,11 @@ const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; 
         if (existingResponse.status === 404) {
             console.log(`Video ${videoId} not found in database, will try YouTube API`);
         } else if (existingResponse.id === videoId) {
-            const existingData = await existingResponse.json();
-            if (existingData && existingData.title) {
-                return {
-                    title: existingData.title,
-                    durationSeconds: existingData.durationSeconds || null
-                };
-            }
+            return {
+                title: existingResponse.title,
+                durationSeconds: existingResponse.durationSeconds || null
+            };
+
         }
 
         if (!YOUTUBE_API_KEY) {
@@ -1348,7 +1346,7 @@ export default function WatchLaterPage() {
                                 </div>
                             )}
                         </div>
-                        
+
                         {unreadSuggestions > 0 && (
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-black/20 shadow-lg">
                                 {unreadSuggestions}
