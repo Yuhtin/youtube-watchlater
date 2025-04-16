@@ -7,39 +7,18 @@ import { PlaylistService } from 'src/playlist/playlist.service';
 export class CardService {
     constructor(private prisma: PrismaService, private playlistService : PlaylistService) { }
 
-    private parseDuration(duration: string): number {
-        if (!duration) {
-            return 0;
-        }
-
-        try {
-            const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
-            const match = duration.match(regex);
-
-            if (!match) {
-                console.warn(`Invalid duration format: ${duration}`);
-                return 0;
-            }
-
-            const hours = match[1] ? parseInt(match[1], 10) : 0;
-            const minutes = match[2] ? parseInt(match[2], 10) : 0;
-            const seconds = match[3] ? parseInt(match[3], 10) : 0;
-
-            return hours * 3600 + minutes * 60 + seconds;
-        } catch (error) {
-            console.error(`Error parsing duration: ${duration}`, error);
-            return 0;
-        }
-    }
-
     async create(data: any) {
         try {
+            console.log('Creating card with data:', data);
+
             const existingCard = await this.prisma.card.findFirst({
                 where: {
-                    id: data.id,
+                    videoId: data.videoId,
                     userId: data.userId
                 }
             });
+
+            console.log('Existing card:', existingCard);
 
             if (existingCard) {
                 return {
@@ -61,6 +40,8 @@ export class CardService {
 
             return response;
         } catch (error) {
+            console.log('Error creating card:', error);
+
             if (error.code === 'P2002') {
                 return {
                     statusCode: 409,
@@ -171,7 +152,7 @@ export class CardService {
         });
     }
 
-    async findAllWithFilter(userId: string, filter: any) {
+    async findAllWithFilter(filter: any) {
         return this.prisma.card.findMany({
             where: filter,
             orderBy: {
@@ -180,8 +161,12 @@ export class CardService {
         });
     }
 
-    async findOne(id: string) {
-        return this.prisma.card.findUnique({ where: { id } });
+    async findOneByVideoId(videoId: string, userId: string) {
+        return this.prisma.card.findUnique({ where: { videoId_userId: { videoId, userId } } });
+    }
+
+    async findAnyWithVideoId(videoId: string) {
+        return this.prisma.card.findFirst({ where: { videoId } });
     }
 
     async update(id: string, data: Prisma.CardUpdateInput) {
@@ -200,31 +185,11 @@ export class CardService {
         });
     }
 
-    async updateCardStatus(id: string, status: ColumnType) {
-        const card = await this.findOne(id);
-        
-        if (!card) {
-            throw new Error('Card not found');
-        }
-        
-        const updatedCard = await this.prisma.card.update({
-            where: { id },
-            data: { status },
-        });
-        
-        if (updatedCard.playlistId) {
-            await this.playlistService.calculatePlaylistStatus(updatedCard.playlistId);
-            this.playlistService.calculatePlaylistDuration(updatedCard.playlistId);
-        }
-        
-        return updatedCard;
-    }
-
     async findByVideoIdAndUserId(videoId: string, userId: string) {
         return this.prisma.card.findFirst({
             where: {
-                id: videoId,
-                userId: userId
+                videoId,
+                userId
             }
         });
     }

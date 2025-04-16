@@ -29,6 +29,7 @@ ChartJS.register(
 
 interface Video {
     id: string;
+    videoId: string;
     title: string;
     thumbnailUrl: string;
     url: string;
@@ -67,11 +68,11 @@ const getPlaylistStatus = (playlist: any) => {
 
 const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; durationSeconds: number | null } | null> => {
     try {
-        const existingResponse = await apiRequest(`/cards/${videoId}`);
+        const existingResponse = await apiRequest(`/cards/global/${videoId}`);
 
         if (existingResponse.status === 404) {
             console.log(`Video ${videoId} not found in database, will try YouTube API`);
-        } else if (existingResponse.id === videoId) {
+        } else if (existingResponse.videoId === videoId) {
             return {
                 title: existingResponse.title,
                 durationSeconds: existingResponse.durationSeconds || null
@@ -351,7 +352,7 @@ export default function WatchLaterPage() {
                         const columnKey = card.status;
                         if (newColumns[columnKey]) {
                             newColumns[columnKey].videos = [
-                                ...newColumns[columnKey].videos.filter(v => v.id !== card.id),
+                                ...newColumns[columnKey].videos.filter(v => v.videoId !== card.videoId),
                                 card
                             ];
                         }
@@ -509,7 +510,7 @@ export default function WatchLaterPage() {
                     method: "DELETE",
                 });
 
-                if (response.id === videoId) {
+                if (response.videoId === videoId) {
                     fetchColumns();
                     toast.dismiss(loadingToast);
                     toast.success("Video removed successfully");
@@ -541,7 +542,7 @@ export default function WatchLaterPage() {
                 }),
             });
 
-            if (response.id === videoId) {
+            if (response.videoId === videoId) {
                 fetchColumns();
                 toast.success(`Video moved to ${columns[newStatus].title}`, {
                     position: "bottom-right"
@@ -624,14 +625,14 @@ export default function WatchLaterPage() {
 
     const openVideo = (status: string, video: Video) => {
         if (video.isPlaylist) {
-            const playlistId = video.id.replace('playlist-', '');
+            const playlistId = video.videoId.replace('playlist-', '');
             const fullPlaylist = getPlaylistById(playlistId);
             if (fullPlaylist) {
                 setSelectedPlaylist(fullPlaylist);
             }
         } else {
             if (status === "WATCH_LATER") {
-                moveVideo(video.id, ColumnType.WATCHING);
+                moveVideo(video.videoId, ColumnType.WATCHING);
             }
             window.open(video.url, "_blank");
             toast.info(`Opening ${video.title}`, {
@@ -757,7 +758,7 @@ export default function WatchLaterPage() {
                     videoDetailsData.items.forEach((item: any) => {
                         const duration = item.contentDetails?.duration || null;
                         const durationSeconds = duration ? parseDuration(duration) : 0;
-                        durationMap[item.id] = durationSeconds;
+                        durationMap[item.videoId] = durationSeconds;
                     });
                 }
 
@@ -766,7 +767,7 @@ export default function WatchLaterPage() {
                     const durationSeconds = durationMap[videoId] || 0;
 
                     return {
-                        id: videoId,
+                        videoId: videoId,
                         title: item.snippet.title,
                         thumbnailUrl: item.snippet.thumbnails?.high?.url ||
                             item.snippet.thumbnails?.default?.url ||
@@ -835,7 +836,7 @@ export default function WatchLaterPage() {
 
                     if (response.statusCode === 409) {
                         duplicateCount++;
-                    } else if (response.id) {
+                    } else if (response.videoId) {
                         addedCount++;
                     } else {
                         failedCount++;
@@ -908,7 +909,7 @@ export default function WatchLaterPage() {
         let sourceStatus = null;
 
         for (const [columnId, column] of Object.entries(columns)) {
-            if (column.videos.some(video => video.id === activeId)) {
+            if (column.videos.some(video => video.videoId === activeId)) {
                 sourceStatus = columnId;
                 break;
             }
@@ -916,7 +917,7 @@ export default function WatchLaterPage() {
 
         if (!destinationStatus) {
             for (const [columnId, column] of Object.entries(columns)) {
-                if (column.videos.some(video => video.id === overId)) {
+                if (column.videos.some(video => video.videoId === overId)) {
                     destinationStatus = columnId;
                     break;
                 }
@@ -986,7 +987,7 @@ export default function WatchLaterPage() {
             if (status === "WATCH_LATER") {
                 const loadingToast = toast.loading("Updating status...");
 
-                apiRequest(`/cards/${item.id}`, {
+                apiRequest(`/cards/${item.videoId}`, {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -1041,11 +1042,11 @@ export default function WatchLaterPage() {
             let destinationStatus = Object.keys(playlistColumns).includes(overId) ? overId : null;
 
             for (const [columnId, column] of Object.entries(playlistColumns)) {
-                if (column.videos.some(video => video.id === activeId)) {
+                if (column.videos.some(video => video.videoId === activeId)) {
                     sourceStatus = columnId;
                 }
 
-                if (!destinationStatus && column.videos.some(video => video.id === overId)) {
+                if (!destinationStatus && column.videos.some(video => video.videoId === overId)) {
                     destinationStatus = columnId;
                 }
             }
@@ -1235,7 +1236,7 @@ export default function WatchLaterPage() {
                 },
             });
 
-            if (response && response.id) {
+            if (response && response.videoId) {
                 toast.dismiss(loadingToast);
                 toast.success(`Suggestion sent to ${selectedUser.username}`);
 
@@ -1873,7 +1874,7 @@ export default function WatchLaterPage() {
                                         }).then(response => {
                                             if (response.statusCode === 409) {
                                                 duplicateCount++;
-                                            } else if (response.id) {
+                                            } else if (response.videoId) {
                                                 successCount++;
                                             } else {
                                                 failedCount++;

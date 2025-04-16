@@ -8,14 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  username  String     @unique
-  password  String
-  imageUrl  String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  cards     Card[]
-  playlists Playlist[]
+  id                  String       @id @default(uuid())
+  username            String       @unique
+  password            String
+  imageUrl            String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  cards               Card[]
+  playlists           Playlist[]
   sentSuggestions     Suggestion[] @relation("SentSuggestions")
   receivedSuggestions Suggestion[] @relation("ReceivedSuggestions")
 }
@@ -36,7 +36,8 @@ model Playlist {
 }
 
 model Card {
-  id              String     @id
+  id              String     @id @default(uuid())
+  videoId         String
   title           String
   url             String
   thumbnailUrl    String
@@ -46,28 +47,30 @@ model Card {
   playlistId      String?
   durationSeconds Int?
   addedAt         DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
 
   user     User      @relation(fields: [userId], references: [id])
   playlist Playlist? @relation(fields: [playlistId], references: [id])
 
+  @@unique([videoId, userId])
   @@map("cards")
 }
 
 model Suggestion {
-  id             String    @id @default(uuid())
-  fromUser       User      @relation("SentSuggestions", fields: [fromUserId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  fromUser       User     @relation("SentSuggestions", fields: [fromUserId], references: [id], onDelete: Cascade)
   fromUserId     String
-  toUser         User      @relation("ReceivedSuggestions", fields: [toUserId], references: [id], onDelete: Cascade)
+  toUser         User     @relation("ReceivedSuggestions", fields: [toUserId], references: [id], onDelete: Cascade)
   toUserId       String
   videoId        String
   videoTitle     String
   videoThumbnail String
   videoDuration  Int?
   note           String?
-  read           Boolean   @default(false)
+  read           Boolean  @default(false)
   accepted       Boolean?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([fromUserId])
   @@index([toUserId])

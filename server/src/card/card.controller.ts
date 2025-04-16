@@ -13,9 +13,22 @@ export class CardController {
         return { count };
     }
 
+    @Get('global/:videoId')
+    async getCardOfAnyUser(@Param('videoId') videoId: string) {
+        const card = await this.cardService.findAnyWithVideoId(videoId);
+
+        if (!card) {
+            return { statusCode: 404, message: `Card with videoId ${videoId} not found` };
+        }
+
+        return card;
+    }
+
     @UseGuards(JwtAuthGuard)
     @Post()
     async create(@Body() body: any, @Request() req) {
+        console.log('Sim tem:', req.user.userId)
+
         const result = await this.cardService.create({
             ...body,
             userId: req.user.userId,
@@ -72,43 +85,55 @@ export class CardController {
             }
         }
 
-        return this.cardService.findAllWithFilter(userId, filter);
+        return this.cardService.findAllWithFilter(filter);
     }
 
     @UseGuards(JwtAuthGuard)
-    @Get(':id')
-    async findOne(@Param('id') id: string) {
-        const card = await this.cardService.findOne(id);
+    @Get(':videoId')
+    async findOne(@Param('videoId') videoId: string, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return { statusCode: 401, message: 'Unauthorized' };
+        }
+
+        const card = await this.cardService.findOneByVideoId(videoId, req.user.userId);
 
         if (!card) {
-            return { statusCode: 404, message: `Card with ID ${id} not found` };
+            return { statusCode: 404, message: `Card with videoId ${videoId} not found` };
         }
 
         return card;
     }
 
     @UseGuards(JwtAuthGuard)
-    @Patch(':id')
-    async update(@Param('id') id: string, @Body() body: any) {
-        const card = await this.cardService.findOne(id);
-
-        if (!card) {
-            return { statusCode: 404, message: `Card with ID ${id} not found` };
+    @Patch(':videoId')
+    async update(@Param('videoId') videoId: string, @Body() body: any, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return { statusCode: 401, message: 'Unauthorized' };
         }
 
-        return this.cardService.update(id, body);
+        const card = await this.cardService.findOneByVideoId(videoId, req.user.userId);
+
+        if (!card) {
+            return { statusCode: 404, message: `Card with videoId ${videoId} not found` };
+        }
+
+        return this.cardService.update(card.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
-    @Delete(':id')
-    async remove(@Param('id') id: string) {
-        const card = await this.cardService.findOne(id);
-
-        if (!card) {
-            return { statusCode: 404, message: `Card with ID ${id} not found` };
+    @Delete(':videoId')
+    async remove(@Param('videoId') videoId: string, @Request() req) {
+        if (!req.user || !req.user.userId) {
+            return { statusCode: 401, message: 'Unauthorized' };
         }
 
-        return this.cardService.remove(id);
+        const card = await this.cardService.findOneByVideoId(videoId, req.user.userId);
+
+        if (!card) {
+            return { statusCode: 404, message: `Card with videoId ${videoId} not found` };
+        }
+
+        return this.cardService.remove(card.id);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -132,9 +157,9 @@ export class CardController {
     @Get('check')
     async checkVideoExists(@Query() query: { videoId: string; userId: string }) {
         const { videoId, userId } = query;
-        
+
         const card = await this.cardService.findByVideoIdAndUserId(videoId, userId);
-        
+
         return { exists: !!card };
     }
 }

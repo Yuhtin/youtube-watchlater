@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 export interface CardItem {
     id: string;
+    videoId: string;
     title: string;
     thumbnailUrl: string;
     url: string;
@@ -121,7 +122,7 @@ export function KanbanBoard({
                                 className="flex-1 min-h-[400px] max-h-[600px] flex flex-col"
                             >
                                 <SortableContext
-                                    items={column.videos.map((video) => video.id)}
+                                    items={column.videos.map((video) => video.videoId)}
                                     strategy={verticalListSortingStrategy}
                                 >
                                     <div className="p-4 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -135,13 +136,13 @@ export function KanbanBoard({
                                             <div className="space-y-4">
                                                 {column.videos.filter(video => hidePlaylistVideos ? !video.playlistId : !!video.playlistId).map((video) => (
                                                     <SortableItem
-                                                        key={video.id}
-                                                        id={video.id}
+                                                        key={video.videoId}
+                                                        id={video.videoId}
                                                         video={video}
                                                         status={column.id}
                                                         onOpen={() => onItemOpen(column.id, video)}
-                                                        onRemove={() => onItemRemove(column.id, video.id)}
-                                                        disabled={disableDragFor(video.id)}
+                                                        onRemove={() => onItemRemove(column.id, video.videoId)}
+                                                        disabled={disableDragFor(video.videoId)}
                                                         isPlaylist={video.isPlaylist}
                                                     />
                                                 ))}
