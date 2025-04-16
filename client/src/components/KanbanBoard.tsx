@@ -99,6 +99,13 @@ export function KanbanBoard({
                             : 'bg-green-500/10 border-green-300/30';
 
                     const icon = columnIcons[columnKey as keyof typeof columnIcons];
+                    const totalVideos = column.videos.reduce((total, video) => {
+                        if (video.isPlaylist && video._count?.cards) {
+                            return total + video._count.cards;
+                        }
+
+                        return total + 1;
+                    }, 0);
 
                     return (
                         <div
@@ -112,7 +119,7 @@ export function KanbanBoard({
                                         {column.title}
                                     </span>
                                     <span className="bg-white/20 text-white text-sm py-1 px-3 rounded-full">
-                                        {column.videos.length}
+                                        {totalVideos}
                                     </span>
                                 </h2>
                             </div>
@@ -149,7 +156,7 @@ export function KanbanBoard({
                                             </div>
                                         )}
                                     </div>
-                                </SortableContext>                                
+                                </SortableContext>
                             </DroppableColumn>
                         </div>
                     );
