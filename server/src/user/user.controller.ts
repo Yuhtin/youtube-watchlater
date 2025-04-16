@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UnauthorizedException, Delete, UseGuards, Request, Patch, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UnauthorizedException, Delete, UseGuards, Request, Patch, BadRequestException, ForbiddenException, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -9,6 +9,16 @@ export class UserController {
     @Post()
     create(@Body() createUserDto: { username: string; password: string; imageUrl?: string }) {
         return this.userService.create(createUserDto);
+    }
+
+
+    @Get('search')
+    async searchUsers(@Query('query') query: string) {
+        if (!query || query.length < 3) {
+            return [];
+        }
+
+        return this.userService.searchByUsername(query);
     }
 
     @Get()
@@ -56,8 +66,8 @@ export class UserController {
             }
 
             // Atualizar o usuário
-            const updatedUser = await this.userService.updateUser(id, { 
-                username: body.username 
+            const updatedUser = await this.userService.updateUser(id, {
+                username: body.username
             });
 
             return {
@@ -72,7 +82,7 @@ export class UserController {
             if (error instanceof BadRequestException || error instanceof ForbiddenException) {
                 throw error;
             }
-            
+
             throw new BadRequestException('Error updating username: ' + error.message);
         }
     }
@@ -108,8 +118,8 @@ export class UserController {
             }
 
             // Atualizar senha
-            await this.userService.updateUser(id, { 
-                password: body.newPassword 
+            await this.userService.updateUser(id, {
+                password: body.newPassword
             });
 
             return {
@@ -120,7 +130,7 @@ export class UserController {
             if (error instanceof BadRequestException || error instanceof ForbiddenException) {
                 throw error;
             }
-            
+
             throw new BadRequestException('Error updating password: ' + error.message);
         }
     }
@@ -154,7 +164,7 @@ export class UserController {
             if (error instanceof BadRequestException || error instanceof ForbiddenException) {
                 throw error;
             }
-            
+
             throw new BadRequestException('Error updating profile image: ' + error.message);
         }
     }
@@ -162,22 +172,22 @@ export class UserController {
     @UseGuards(JwtAuthGuard)
     @Delete(':id')
     async deleteAccount(
-        @Param('id') id: string, 
+        @Param('id') id: string,
         @Body() body: { password: string },
         @Request() req
     ) {
         if (id !== req.user.userId) {
-            return { 
+            return {
                 success: false,
                 statusCode: 403,
-                message: 'You can only delete your own account' 
+                message: 'You can only delete your own account'
             };
         }
-        
+
         try {
             const user = await this.userService.findById(id, true);
             const userWithPassword = user as any;
-            
+
             if (!user) {
                 return {
                     success: false,
@@ -185,12 +195,12 @@ export class UserController {
                     message: 'User not found'
                 };
             }
-            
+
             const isPasswordValid = await this.userService.validatePassword(
                 body.password,
                 userWithPassword.password
             );
-            
+
             if (!isPasswordValid) {
                 return {
                     success: false,
@@ -198,9 +208,9 @@ export class UserController {
                     message: 'Invalid password'
                 };
             }
-            
+
             await this.userService.deleteUser(id);
-            
+
             return {
                 success: true,
                 message: 'Account deleted successfully'
@@ -218,11 +228,11 @@ export class UserController {
     private validateImageUrl(url: string): { valid: boolean; reason?: string } {
         try {
             const parsedUrl = new URL(url);
-            
+
             if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
                 return { valid: false, reason: 'URL must use HTTP or HTTPS protocol' };
             }
-            
+
             const trustedDomains = [
                 'i.imgur.com',
                 'imgur.com',
@@ -234,9 +244,9 @@ export class UserController {
                 's3.amazonaws.com',
                 'cloudfront.net',
                 'githubusercontent.com',
-                'ytimg.com',           
-                'twimg.com',           
-                'pbs.twimg.com',       
+                'ytimg.com',
+                'twimg.com',
+                'pbs.twimg.com',
                 'media.giphy.com',
                 'giphy.com',
                 'tenor.com',
@@ -247,24 +257,24 @@ export class UserController {
                 'live.staticflickr.com',
                 'upload.wikimedia.org'
             ];
-            
+
             const domain = parsedUrl.hostname;
-            const isDomainTrusted = trustedDomains.some(trusted => 
+            const isDomainTrusted = trustedDomains.some(trusted =>
                 domain === trusted || domain.endsWith('.' + trusted)
             );
-            
+
             if (!isDomainTrusted) {
                 return { valid: false, reason: 'Domain not in trusted image providers list' };
             }
-    
+
             const path = parsedUrl.pathname.toLowerCase();
             const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
             const hasValidExtension = validExtensions.some(ext => path.endsWith(ext));
-            
+
             if (!hasValidExtension) {
                 return { valid: false, reason: 'URL must point to a valid image file format' };
             }
-            
+
             return { valid: true };
         } catch (error) {
             return { valid: false, reason: 'Invalid URL format' };

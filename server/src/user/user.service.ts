@@ -4,7 +4,7 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-    constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService) { }
 
     async create(data: { username: string; password: string; imageUrl?: string }) {
         const existingUser = await this.prisma.user.findUnique({
@@ -102,7 +102,7 @@ export class UserService {
             const { password, ...result } = user;
             return result;
         }
-        
+
         return user;
     }
 
@@ -136,25 +136,42 @@ export class UserService {
         if (updateData.password) {
             updateData.password = await bcrypt.hash(updateData.password, 10);
         }
-        
+
         const user = await this.prisma.user.update({
             where: { id },
             data: updateData
         });
-        
+
         const { password, ...result } = user;
         return result;
+    }
+
+    async searchByUsername(query: string) {
+        return this.prisma.user.findMany({
+            where: {
+                username: {
+                    contains: query,
+                    mode: 'insensitive'
+                }
+            },
+            select: {
+                id: true,
+                username: true,
+                imageUrl: true
+            },
+            take: 5
+        });
     }
 
     async findByUsername(username: string) {
         const user = await this.prisma.user.findUnique({
             where: { username }
         });
-        
+
         if (!user) {
             return null;
         }
-        
+
         const { password, ...result } = user;
         return result;
     }

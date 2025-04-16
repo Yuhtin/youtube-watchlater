@@ -16,6 +16,8 @@ model User {
   updatedAt DateTime   @updatedAt
   cards     Card[]
   playlists Playlist[]
+  sentSuggestions     Suggestion[] @relation("SentSuggestions")
+  receivedSuggestions Suggestion[] @relation("ReceivedSuggestions")
 }
 
 model Playlist {
@@ -49,6 +51,26 @@ model Card {
   playlist Playlist? @relation(fields: [playlistId], references: [id])
 
   @@map("cards")
+}
+
+model Suggestion {
+  id             String    @id @default(uuid())
+  fromUser       User      @relation("SentSuggestions", fields: [fromUserId], references: [id], onDelete: Cascade)
+  fromUserId     String
+  toUser         User      @relation("ReceivedSuggestions", fields: [toUserId], references: [id], onDelete: Cascade)
+  toUserId       String
+  videoId        String
+  videoTitle     String
+  videoThumbnail String
+  videoDuration  Int?
+  note           String?
+  read           Boolean   @default(false)
+  accepted       Boolean?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([fromUserId])
+  @@index([toUserId])
 }
 
 enum ColumnType {

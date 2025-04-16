@@ -127,4 +127,14 @@ export class CardController {
             throw error;
         }
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('check')
+    async checkVideoExists(@Query() query: { videoId: string; userId: string }) {
+        const { videoId, userId } = query;
+        
+        const card = await this.cardService.findByVideoIdAndUserId(videoId, userId);
+        
+        return { exists: !!card };
+    }
 }

@@ -219,4 +219,13 @@ export class CardService {
         
         return updatedCard;
     }
+
+    async findByVideoIdAndUserId(videoId: string, userId: string) {
+        return this.prisma.card.findFirst({
+            where: {
+                id: videoId,
+                userId: userId
+            }
+        });
+    }
 }

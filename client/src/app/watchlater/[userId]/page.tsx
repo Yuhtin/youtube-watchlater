@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List, Settings, LogOut, Camera, UploadCloud } from "lucide-react";
+import { Plus, X, Youtube, Trash2, AlertCircle, Check, ExternalLink, RotateCcw, ListVideo, Eye, EyeOff, List, Settings, LogOut, Camera, UploadCloud, Mail, Send, UserSearch, CheckCircle, XCircle, MessageSquare, ChevronRight, Clock, ArrowLeft, User } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
@@ -9,7 +9,7 @@ import { KanbanBoard, Column as KanbanColumn, CardItem } from '../../../componen
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
-import { getRandomColor } from "@/src/lib/utils";
+import { formatDuration, getRandomColor } from "@/src/lib/utils";
 
 interface Video {
     id: string;
@@ -161,6 +161,17 @@ export default function WatchLaterPage() {
     const [userColorLight, setUserColorLight] = useState("rgba(59, 130, 246, 0.15)");
     const [userColorBorder, setUserColorBorder] = useState("rgba(59, 130, 246, 0.3)");
 
+    const [inboxSuggestions, setInboxSuggestions] = useState<any[]>([]);
+    const [outboxSuggestions, setOutboxSuggestions] = useState<any[]>([]);
+    const [unreadSuggestions, setUnreadSuggestions] = useState(0);
+    const [sendToUsername, setSendToUsername] = useState("");
+    const [suggestVideoUrl, setSuggestVideoUrl] = useState("");
+    const [suggestNote, setSuggestNote] = useState("");
+    const [searchingUser, setSearchingUser] = useState(false);
+    const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+    const [selectedUser, setSelectedUser] = useState<any>(null);
+    const [sendingMessage, setSendingMessage] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
     const params = useParams();
@@ -215,6 +226,7 @@ export default function WatchLaterPage() {
             }
 
             fetchColumns();
+            fetchSuggestions(); // Adicionada chamada para buscar sugestões
         } catch (error) {
             console.error('Invalid token:', error);
             localStorage.removeItem("token");
@@ -312,6 +324,25 @@ export default function WatchLaterPage() {
             }
         } catch (error) {
             console.error("Failed to fetch playlists:", error);
+        }
+    };
+
+    const fetchSuggestions = async () => {
+        try {
+            const response = await apiRequest(`/suggestions?userId=${userId}`);
+
+            if (response && Array.isArray(response)) {
+                const receivedSuggestions = response.filter(s => s.toUserId === userId);
+                setInboxSuggestions(receivedSuggestions);
+
+                const sentSuggestions = response.filter(s => s.fromUserId === userId);
+                setOutboxSuggestions(sentSuggestions);
+
+                const unread = receivedSuggestions.filter(s => !s.read).length;
+                setUnreadSuggestions(unread);
+            }
+        } catch (error) {
+            console.error("Failed to fetch suggestions:", error);
         }
     };
 
@@ -894,7 +925,6 @@ export default function WatchLaterPage() {
         WATCHING: "▶️",
         WATCHED: "✅",
     };
-
     const renderPlaylistKanban = () => {
         const playlistColumns: { [key: string]: KanbanColumn } = {
             WATCH_LATER: { id: "WATCH_LATER", title: "Watch Later", videos: [] },
@@ -1086,6 +1116,193 @@ export default function WatchLaterPage() {
         return result;
     }, [columns, filters]);
 
+    // Busca usuários pelo nome de usuário
+    const searchUsers = async (query: string) => {
+        if (!query.trim() || query.length < 3) {
+            setUserSearchResults([]);
+            return;
+        }
+
+        setSearchingUser(true);
+
+        try {
+            const response = await apiRequest(`/users/search?query=${encodeURIComponent(query)}`);
+
+            if (response && Array.isArray(response)) {
+                // Filtra o usuário atual da lista de resultados
+                setUserSearchResults(response.filter(user => user.id !== userId));
+            } else {
+                setUserSearchResults([]);
+            }
+        } catch (error) {
+            console.error("Error searching users:", error);
+            toast.error("Failed to search users");
+        } finally {
+            setSearchingUser(false);
+        }
+    };
+
+    // Função para enviar sugestão de vídeo
+    const sendVideoSuggestion = async () => {
+        if (!selectedUser) {
+            toast.error("Please select a valid user");
+            return;
+        }
+
+        if (!suggestVideoUrl.trim()) {
+            toast.error("Please enter a YouTube video URL");
+            return;
+        }
+
+        const { id, isPlaylist } = extractVideoId(suggestVideoUrl);
+
+        if (!id) {
+            toast.error("Invalid YouTube URL");
+            return;
+        }
+
+        if (isPlaylist) {
+            toast.error("Playlists are not supported for suggestions");
+            return;
+        }
+
+        setSendingMessage(true);
+        const loadingToast = toast.loading("Sending suggestion...");
+
+        try {
+            // Verifica se o usuário já tem o vídeo
+            const checkResponse = await apiRequest(`/cards/check?videoId=${id}&userId=${selectedUser.id}`);
+
+            if (checkResponse && checkResponse.exists) {
+                toast.dismiss(loadingToast);
+                toast.warning(`${selectedUser.username} already has this video in their collection`);
+                setSendingMessage(false);
+                return;
+            }
+
+            // Busca informações do vídeo
+            const videoInfo = await fetchVideoInfo(id);
+            if (!videoInfo) {
+                toast.dismiss(loadingToast);
+                toast.error("Failed to fetch video info");
+                setSendingMessage(false);
+                return;
+            }
+
+            // Envia a sugestão
+            const response = await apiRequest('/suggestions', {
+                method: "POST",
+                body: {
+                    fromUserId: userId,
+                    toUserId: selectedUser.id,
+                    videoId: id,
+                    videoTitle: videoInfo.title,
+                    videoThumbnail: `https://img.youtube.com/vi/${id}/0.jpg`,
+                    videoDuration: videoInfo.durationSeconds,
+                    note: suggestNote,
+                },
+            });
+
+            if (response && response.id) {
+                toast.dismiss(loadingToast);
+                toast.success(`Suggestion sent to ${selectedUser.username}`);
+
+                // Limpa os campos e atualiza a lista de sugestões enviadas
+                setSendToUsername("");
+                setSuggestVideoUrl("");
+                setSuggestNote("");
+                setSelectedUser(null);
+                setUserSearchResults([]);
+
+                fetchSuggestions();
+            } else {
+                throw new Error("Failed to send suggestion");
+            }
+        } catch (error) {
+            console.error("Error sending suggestion:", error);
+            toast.dismiss(loadingToast);
+            toast.error("Failed to send video suggestion");
+        } finally {
+            setSendingMessage(false);
+        }
+    };
+
+    // Função para aceitar uma sugestão
+    const acceptSuggestion = async (suggestion: any) => {
+        const loadingToast = toast.loading("Adding video to your collection...");
+
+        try {
+            // Marca a sugestão como lida
+            await apiRequest(`/suggestions/${suggestion.id}`, {
+                method: "PATCH",
+                body: { read: true, accepted: true }
+            });
+
+            // Adiciona o vídeo à coleção do usuário
+            const newVideo = {
+                id: suggestion.videoId,
+                title: suggestion.videoTitle,
+                thumbnailUrl: suggestion.videoThumbnail,
+                url: `https://www.youtube.com/watch?v=${suggestion.videoId}`,
+                status: "WATCH_LATER",
+                userId: userId,
+                durationSeconds: suggestion.videoDuration || null,
+            };
+
+            await apiRequest('/cards', {
+                method: "POST",
+                body: newVideo,
+            });
+
+            toast.dismiss(loadingToast);
+            toast.success("Video added to your collection");
+
+            // Atualiza as listas
+            fetchSuggestions();
+            fetchColumns();
+        } catch (error) {
+            console.error("Error accepting suggestion:", error);
+            toast.dismiss(loadingToast);
+            toast.error("Failed to add video");
+        }
+    };
+
+    // Função para recusar uma sugestão
+    const declineSuggestion = async (suggestion: any) => {
+        const loadingToast = toast.loading("Declining suggestion...");
+
+        try {
+            await apiRequest(`/suggestions/${suggestion.id}`, {
+                method: "PATCH",
+                body: { read: true, accepted: false }
+            });
+
+            toast.dismiss(loadingToast);
+            toast.success("Suggestion declined");
+
+            fetchSuggestions();
+        } catch (error) {
+            console.error("Error declining suggestion:", error);
+            toast.dismiss(loadingToast);
+            toast.error("Failed to decline suggestion");
+        }
+    };
+
+    const markAsRead = async (suggestion: any) => {
+        if (suggestion.read) return;
+
+        try {
+            await apiRequest(`/suggestions/${suggestion.id}`, {
+                method: "PATCH",
+                body: { read: true }
+            });
+
+            fetchSuggestions();
+        } catch (error) {
+            console.error("Error marking suggestion as read:", error);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[url('/images/gradient-bg.jpg')] bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
@@ -1115,7 +1332,7 @@ export default function WatchLaterPage() {
                 <div className="flex items-center gap-3 mt-4 md:mt-0">
                     <button
                         onClick={() => setIsSettingsModalOpen(true)}
-                        className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-lg border border-white/20"
+                        className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-lg border border-white/20 relative"
                     >
                         <span className="text-white text-sm">{username}</span>
                         <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
@@ -1131,6 +1348,12 @@ export default function WatchLaterPage() {
                                 </div>
                             )}
                         </div>
+                        
+                        {unreadSuggestions > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-black/20 shadow-lg">
+                                {unreadSuggestions}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>
@@ -1594,7 +1817,28 @@ export default function WatchLaterPage() {
                                             : "text-white/70 hover:text-white hover:bg-white/5"
                                             }`}
                                     >
-                                        Profile
+                                        <div className="flex items-center">
+                                            <User className="w-4 h-4 mr-2" />
+                                            Profile
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setActiveSettingsTab("inbox")}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${activeSettingsTab === "inbox"
+                                            ? "bg-white/10 text-white font-medium"
+                                            : "text-white/70 hover:text-white hover:bg-white/5"
+                                            }`}
+                                    >
+                                        <div className="flex items-center">
+                                            <Mail className="w-4 h-4 mr-2" />
+                                            Inbox
+                                        </div>
+                                        {unreadSuggestions > 0 && (
+                                            <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                                {unreadSuggestions}
+                                            </span>
+                                        )}
                                     </button>
                                 </div>
 
@@ -1779,6 +2023,404 @@ export default function WatchLaterPage() {
                                                     <Trash2 className="w-4 h-4" />
                                                     Delete Account
                                                 </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeSettingsTab === "inbox" && (
+                                    <div className="flex flex-col h-full">
+                                        <div className="bg-black/20 p-6 border-b border-white/10">
+                                            <h2 className="text-xl font-semibold text-white">Video Suggestions</h2>
+                                            <p className="text-white/60 text-sm mt-1">
+                                                Share and receive video suggestions with other users.
+                                            </p>
+                                        </div>
+
+                                        <div className="p-6 flex-grow overflow-y-auto">
+                                            <div className="mb-8">
+                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                                                    <Send className="w-4 h-4 mr-2" />
+                                                    Send a Suggestion
+                                                </h3>
+
+                                                <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-4">
+                                                    <div className="space-y-4">
+                                                        <div>
+                                                            <label className="block text-sm text-white/70 mb-2">
+                                                                To User
+                                                            </label>
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    value={sendToUsername}
+                                                                    onChange={(e) => {
+                                                                        setSendToUsername(e.target.value);
+                                                                        setSelectedUser(null);
+                                                                        searchUsers(e.target.value);
+                                                                    }}
+                                                                    placeholder="Search by username"
+                                                                    className="w-full pl-9 pr-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                                    disabled={!!selectedUser}
+                                                                />
+                                                                <UserSearch className="absolute left-3 top-3 h-4 w-4 text-white/50" />
+
+                                                                {sendToUsername && !selectedUser && (
+                                                                    <button
+                                                                        className="absolute right-2 top-2 text-white/50 hover:text-white p-1"
+                                                                        onClick={() => {
+                                                                            setSendToUsername("");
+                                                                            setUserSearchResults([]);
+                                                                        }}
+                                                                    >
+                                                                        <X className="h-4 w-4" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {userSearchResults.length > 0 && !selectedUser && (
+                                                                <div className="mt-1 bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden absolute z-10 w-[calc(100%-3rem)] max-h-48 overflow-y-auto shadow-lg"
+                                                                    style={{
+                                                                        backdropFilter: 'blur(16px)',
+                                                                        WebkitBackdropFilter: 'blur(16px)',
+                                                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                                                                    }}>
+                                                                    {userSearchResults.map(user => (
+                                                                        <button
+                                                                            key={user.id}
+                                                                            className="flex items-center w-full p-2 hover:bg-white/10 text-left text-white text-sm"
+                                                                            onClick={() => {
+                                                                                setSelectedUser(user);
+                                                                                setSendToUsername(user.username);
+                                                                                setUserSearchResults([]);
+                                                                            }}
+                                                                        >
+                                                                            <div className="w-8 h-8 rounded-full bg-white/10 mr-2 flex items-center justify-center overflow-hidden">
+                                                                                {user.imageUrl ? (
+                                                                                    <img src={user.imageUrl} alt={user.username} className="w-full h-full object-cover" />
+                                                                                ) : (
+                                                                                    <span className="text-sm font-medium text-white">
+                                                                                        {user.username.charAt(0).toUpperCase()}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <span>{user.username}</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
+                                                            {searchingUser && (
+                                                                <div className="mt-2 text-white/60 text-sm flex items-center">
+                                                                    <svg className="animate-spin h-3 w-3 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                    Searching users...
+                                                                </div>
+                                                            )}
+
+                                                            {selectedUser && (
+                                                                <div className="mt-2 flex items-center bg-white/10 rounded-lg p-2">
+                                                                    <div className="w-8 h-8 rounded-full bg-white/10 mr-2 flex items-center justify-center overflow-hidden">
+                                                                        {selectedUser.imageUrl ? (
+                                                                            <img src={selectedUser.imageUrl} alt={selectedUser.username} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <span className="text-sm font-medium text-white">
+                                                                                {selectedUser.username.charAt(0).toUpperCase()}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-white">{selectedUser.username}</span>
+                                                                    <button
+                                                                        className="ml-auto text-white/50 hover:text-white p-1"
+                                                                        onClick={() => {
+                                                                            setSelectedUser(null);
+                                                                            setSendToUsername("");
+                                                                        }}
+                                                                    >
+                                                                        <X className="h-4 w-4" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm text-white/70 mb-2">
+                                                                YouTube Video URL
+                                                            </label>
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    value={suggestVideoUrl}
+                                                                    onChange={(e) => setSuggestVideoUrl(e.target.value)}
+                                                                    placeholder="Paste YouTube video URL"
+                                                                    className="w-full pl-9 pr-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                                />
+                                                                <Youtube className="absolute left-3 top-3 h-4 w-4 text-red-400" />
+                                                            </div>
+                                                            <p className="text-xs text-white/50 mt-1">Note: Playlists are not supported for suggestions.</p>
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm text-white/70 mb-2">
+                                                                Add a Note (optional)
+                                                            </label>
+                                                            <textarea
+                                                                value={suggestNote}
+                                                                onChange={(e) => setSuggestNote(e.target.value)}
+                                                                placeholder="Why are you recommending this video?"
+                                                                className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20 h-24 resize-none"
+                                                            />
+                                                        </div>
+
+                                                        <button
+                                                            onClick={sendVideoSuggestion}
+                                                            disabled={!selectedUser || !suggestVideoUrl.trim() || sendingMessage}
+                                                            className={`flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm transition-colors ${(!selectedUser || !suggestVideoUrl.trim() || sendingMessage) ? 'opacity-50 cursor-not-allowed' : ''
+                                                                }`}
+                                                        >
+                                                            {sendingMessage ? (
+                                                                <>
+                                                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                    </svg>
+                                                                    Sending...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Send className="h-4 w-4" />
+                                                                    Send Suggestion
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Lista de sugestões recebidas */}
+                                            <div className="mb-8">
+                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
+                                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                                    Inbox
+                                                    {unreadSuggestions > 0 && (
+                                                        <span className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                                            {unreadSuggestions} new
+                                                        </span>
+                                                    )}
+                                                </h3>
+
+                                                {inboxSuggestions.length === 0 ? (
+                                                    <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-8 text-center">
+                                                        <div className="flex justify-center mb-4">
+                                                            <MessageSquare className="h-12 w-12 text-white/20" />
+                                                        </div>
+                                                        <p className="text-white/60">Your inbox is empty.</p>
+                                                        <p className="text-white/40 text-sm mt-1">When someone sends you a video suggestion, it will appear here.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-4">
+                                                        {inboxSuggestions
+                                                            .sort((a, b) => {
+                                                                // Primeiro as não lidas, depois por data mais recente
+                                                                if (a.read !== b.read) return a.read ? 1 : -1;
+                                                                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                                                            })
+                                                            .map(suggestion => (
+                                                                <div
+                                                                    key={suggestion.id}
+                                                                    className={`bg-black/10 backdrop-blur-md rounded-lg border ${suggestion.read ? 'border-white/10' : 'border-blue-500/30'} overflow-hidden`}
+                                                                    onMouseEnter={() => !suggestion.read && markAsRead(suggestion)}
+                                                                >
+                                                                    <div className="p-4 flex flex-col sm:flex-row gap-4">
+                                                                        <a
+                                                                            href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="w-full sm:w-36 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-black/30"
+                                                                        >
+                                                                            <img
+                                                                                src={suggestion.videoThumbnail}
+                                                                                alt={suggestion.videoTitle}
+                                                                                className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                                                                            />
+                                                                        </a>
+
+                                                                        <div className="flex-grow min-w-0">
+                                                                            <div className="flex items-start justify-between gap-4">
+                                                                                <a
+                                                                                    href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-white font-medium hover:text-blue-400 transition-colors line-clamp-2"
+                                                                                >
+                                                                                    {suggestion.videoTitle}
+                                                                                </a>
+                                                                                {!suggestion.read && (
+                                                                                    <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                                                                        New
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            <div className="flex items-center text-white/50 text-sm mt-1 gap-2">
+                                                                                <span className="flex items-center">
+                                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                                    {suggestion.videoDuration ? formatDuration(suggestion.videoDuration) : "Unknown"}
+                                                                                </span>
+
+                                                                                <span className="text-white/30">•</span>
+
+                                                                                <span>
+                                                                                    From: <span className="text-white">{suggestion.fromUser?.username || "Unknown user"}</span>
+                                                                                </span>
+                                                                            </div>
+
+                                                                            {suggestion.note && (
+                                                                                <div className="mt-2 bg-white/5 rounded p-2 text-sm text-white/80">
+                                                                                    {suggestion.note}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="bg-black/20 px-4 py-3 flex justify-between items-center">
+                                                                        <div className="text-xs text-white/50">
+                                                                            {new Date(suggestion.createdAt).toLocaleString()}
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-2">
+                                                                            {suggestion.accepted === null ? (
+                                                                                <>
+                                                                                    <button
+                                                                                        onClick={() => declineSuggestion(suggestion)}
+                                                                                        className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-red-400 px-3 py-1.5 rounded-lg text-sm transition-colors border border-white/10"
+                                                                                    >
+                                                                                        <XCircle className="w-4 h-4" />
+                                                                                        Decline
+                                                                                    </button>
+
+                                                                                    <button
+                                                                                        onClick={() => acceptSuggestion(suggestion)}
+                                                                                        className="flex items-center gap-1 bg-blue-600/50 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                                                                                    >
+                                                                                        <CheckCircle className="w-4 h-4" />
+                                                                                        Accept
+                                                                                    </button>
+                                                                                </>
+                                                                            ) : suggestion.accepted ? (
+                                                                                <span className="text-green-400 text-sm flex items-center gap-1">
+                                                                                    <CheckCircle className="w-4 h-4" /> Accepted
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="text-red-400 text-sm flex items-center gap-1">
+                                                                                    <XCircle className="w-4 h-4" /> Declined
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Lista de sugestões enviadas */}
+                                            <div>
+                                                <h3 className="text-lg font-medium text-white/80 mb-4 flex items-center">
+                                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                                    Sent Suggestions
+                                                </h3>
+
+                                                {outboxSuggestions.length === 0 ? (
+                                                    <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-8 text-center">
+                                                        <p className="text-white/60">You haven't sent any suggestions yet.</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-4">
+                                                        {outboxSuggestions
+                                                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                                            .map(suggestion => (
+                                                                <div
+                                                                    key={suggestion.id}
+                                                                    className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 overflow-hidden"
+                                                                >
+                                                                    <div className="p-4 flex flex-col sm:flex-row gap-4">
+                                                                        <a
+                                                                            href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="w-full sm:w-36 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-black/30"
+                                                                        >
+                                                                            <img
+                                                                                src={suggestion.videoThumbnail}
+                                                                                alt={suggestion.videoTitle}
+                                                                                className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                                                                            />
+                                                                        </a>
+
+                                                                        <div className="flex-grow min-w-0">
+                                                                            <a
+                                                                                href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="text-white font-medium hover:text-blue-400 transition-colors line-clamp-2"
+                                                                            >
+                                                                                {suggestion.videoTitle}
+                                                                            </a>
+
+                                                                            <div className="flex items-center text-white/50 text-sm mt-1 gap-2">
+                                                                                <span className="flex items-center">
+                                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                                    {suggestion.videoDuration ? formatDuration(suggestion.videoDuration) : "Unknown"}
+                                                                                </span>
+
+                                                                                <span className="text-white/30">•</span>
+
+                                                                                <span>
+                                                                                    To: <span className="text-white">{suggestion.toUser?.username || "Unknown user"}</span>
+                                                                                </span>
+
+                                                                                {suggestion.read && (
+                                                                                    <>
+                                                                                        <span className="text-white/30">•</span>
+                                                                                        <span className="text-white/60">Seen</span>
+                                                                                    </>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {suggestion.note && (
+                                                                                <div className="mt-2 bg-white/5 rounded p-2 text-sm text-white/80">
+                                                                                    {suggestion.note}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="bg-black/20 px-4 py-3 flex justify-between items-center">
+                                                                        <div className="text-xs text-white/50">
+                                                                            {new Date(suggestion.createdAt).toLocaleString()}
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-2">
+                                                                            {suggestion.accepted !== null && (
+                                                                                suggestion.accepted ? (
+                                                                                    <span className="text-green-400 text-sm flex items-center gap-1">
+                                                                                        <CheckCircle className="w-4 h-4" /> Accepted
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="text-red-400 text-sm flex items-center gap-1">
+                                                                                        <XCircle className="w-4 h-4" /> Declined
+                                                                                    </span>
+                                                                                )
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
