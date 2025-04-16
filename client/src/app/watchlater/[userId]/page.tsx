@@ -102,7 +102,7 @@ const fetchVideoInfo = async (videoId: string): Promise<{ title: string | null; 
         if (data.items && data.items.length > 0) {
             const title = data.items[0].snippet.title;
             const durationISO = data.items[0].contentDetails?.duration || null;
-            const durationSeconds = durationISO ? parseDuration(durationISO) : null;
+            const durationSeconds = durationISO ? parseDuration(durationISO) : null;            
 
             return { title, durationSeconds };
         }
@@ -333,7 +333,7 @@ export default function WatchLaterPage() {
 
                 const playlistCards = response.map((playlist: { id: string; playlistId: string; title: string; thumbnailUrl: string; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
                     id: playlist.id,
-                    videoId: playlist.playlistId,
+                    videoId: 'playlist-' + playlist.playlistId,
                     title: playlist.title,
                     thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
                     url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`,
@@ -758,7 +758,7 @@ export default function WatchLaterPage() {
                     videoDetailsData.items.forEach((item: any) => {
                         const duration = item.contentDetails?.duration || null;
                         const durationSeconds = duration ? parseDuration(duration) : 0;
-                        durationMap[item.videoId] = durationSeconds;
+                        durationMap[item.id] = durationSeconds;
                     });
                 }
 

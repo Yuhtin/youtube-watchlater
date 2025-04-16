@@ -137,7 +137,7 @@ export class PlaylistService {
 
         await this.prisma.card.deleteMany({
             where: {
-                playlistId,
+                playlistId: playlist.id,
                 userId,
             },
         });
@@ -174,7 +174,7 @@ export class PlaylistService {
 
         await this.prisma.playlist.update({
             where: {
-                playlistId_userId: { playlistId, userId },
+                id: playlistId,                
             },
             data: {
                 durationSeconds: totalDuration,

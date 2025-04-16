@@ -17,6 +17,13 @@ export class CardService {
             });
 
             if (existingCard) {
+                if (data.playlistId && !existingCard.playlistId) {
+                    return await this.prisma.card.update({
+                        where: { id: existingCard.id },
+                        data: { playlistId: data.playlistId }
+                    });
+                }
+
                 return {
                     statusCode: 409,
                     message: "Video already exists in your collection",
