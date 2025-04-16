@@ -90,7 +90,7 @@ export function KanbanBoard({
             onDragEnd={onDragEnd}
             onDragCancel={onDragCancel}
         >
-            <div className="flex flex-nowrap overflow-x-auto pb-4 md:grid md:grid-cols-3 gap-6 snap-x snap-mandatory hide-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {Object.entries(columns).map(([columnKey, column]) => {
                     const colorClasses = columnKey === 'WATCH_LATER'
                         ? 'bg-blue-500/10 border-blue-300/30'
@@ -110,7 +110,7 @@ export function KanbanBoard({
                     return (
                         <div
                             key={column.id}
-                            className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden flex flex-col h-full min-w-[85%] md:min-w-0 flex-shrink-0 snap-center`}
+                            className={`backdrop-blur-xl backdrop-saturate-150 border ${colorClasses} rounded-xl shadow-xl overflow-hidden flex flex-col h-full`}
                         >
                             <div className="p-5 border-b border-white/10 backdrop-blur-sm bg-black/10">
                                 <h2 className="text-xl font-bold text-white flex items-center justify-between">
