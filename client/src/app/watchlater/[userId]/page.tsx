@@ -1279,7 +1279,7 @@ export default function WatchLaterPage() {
                 let status = "WATCH_LATER";
 
                 const newVideo = {
-                    id,
+                    videoId: id,
                     title,
                     thumbnailUrl,
                     url,
