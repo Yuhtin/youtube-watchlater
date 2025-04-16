@@ -224,7 +224,7 @@ export default function WatchLaterPage() {
             }
 
             fetchColumns();
-            fetchSuggestions(); // Adicionada chamada para buscar sugestões
+            fetchSuggestions();
         } catch (error) {
             console.error('Invalid token:', error);
             localStorage.removeItem("token");
@@ -1114,7 +1114,6 @@ export default function WatchLaterPage() {
         return result;
     }, [columns, filters]);
 
-    // Busca usuários pelo nome de usuário
     const searchUsers = async (query: string) => {
         if (!query.trim() || query.length < 3) {
             setUserSearchResults([]);
@@ -1127,7 +1126,6 @@ export default function WatchLaterPage() {
             const response = await apiRequest(`/users/search?query=${encodeURIComponent(query)}`);
 
             if (response && Array.isArray(response)) {
-                // Filtra o usuário atual da lista de resultados
                 setUserSearchResults(response.filter(user => user.id !== userId));
             } else {
                 setUserSearchResults([]);
@@ -1140,7 +1138,6 @@ export default function WatchLaterPage() {
         }
     };
 
-    // Função para enviar sugestão de vídeo
     const sendVideoSuggestion = async () => {
         if (!selectedUser) {
             toast.error("Please select a valid user");
@@ -1168,7 +1165,6 @@ export default function WatchLaterPage() {
         const loadingToast = toast.loading("Sending suggestion...");
 
         try {
-            // Verifica se o usuário já tem o vídeo
             const checkResponse = await apiRequest(`/cards/check?videoId=${id}&userId=${selectedUser.id}`);
 
             if (checkResponse && checkResponse.exists) {
@@ -1178,7 +1174,6 @@ export default function WatchLaterPage() {
                 return;
             }
 
-            // Busca informações do vídeo
             const videoInfo = await fetchVideoInfo(id);
             if (!videoInfo) {
                 toast.dismiss(loadingToast);
@@ -1187,7 +1182,6 @@ export default function WatchLaterPage() {
                 return;
             }
 
-            // Envia a sugestão
             const response = await apiRequest('/suggestions', {
                 method: "POST",
                 body: {
@@ -1205,7 +1199,6 @@ export default function WatchLaterPage() {
                 toast.dismiss(loadingToast);
                 toast.success(`Suggestion sent to ${selectedUser.username}`);
 
-                // Limpa os campos e atualiza a lista de sugestões enviadas
                 setSendToUsername("");
                 setSuggestVideoUrl("");
                 setSuggestNote("");
@@ -1225,18 +1218,15 @@ export default function WatchLaterPage() {
         }
     };
 
-    // Função para aceitar uma sugestão
     const acceptSuggestion = async (suggestion: any) => {
         const loadingToast = toast.loading("Adding video to your collection...");
 
         try {
-            // Marca a sugestão como lida
             await apiRequest(`/suggestions/${suggestion.id}`, {
                 method: "PATCH",
                 body: { read: true, accepted: true }
             });
 
-            // Adiciona o vídeo à coleção do usuário
             const newVideo = {
                 id: suggestion.videoId,
                 title: suggestion.videoTitle,
@@ -1255,7 +1245,6 @@ export default function WatchLaterPage() {
             toast.dismiss(loadingToast);
             toast.success("Video added to your collection");
 
-            // Atualiza as listas
             fetchSuggestions();
             fetchColumns();
         } catch (error) {
@@ -1265,7 +1254,6 @@ export default function WatchLaterPage() {
         }
     };
 
-    // Função para recusar uma sugestão
     const declineSuggestion = async (suggestion: any) => {
         const loadingToast = toast.loading("Declining suggestion...");
 
@@ -1798,56 +1786,88 @@ export default function WatchLaterPage() {
                         </button>
 
                         <div className="relative h-full flex overflow-hidden z-10">
-                            <div className="w-60 p-5 flex flex-col backdrop-blur-md bg-black/20 border-r border-white/10">
+                            <div className="w-16 md:w-60 p-4 md:p-5 flex flex-col backdrop-blur-md bg-black/20 border-r border-white/10">
                                 <Dialog.Title
-                                    className="text-lg font-bold mb-6 flex items-center"
-                                    style={{ color: 'white' }}
+                                    className="text-lg font-bold mb-6 hidden md:flex items-center text-white"
                                 >
                                     <Settings className="mr-2 h-5 w-5" />
                                     Settings
                                 </Dialog.Title>
-
-                                <div className="space-y-1">
+                                
+                                <div className="flex justify-center md:hidden mb-6">
+                                    <Settings className="h-5 w-5 text-white" />
+                                </div>
+                            
+                                <div className="space-y-3">
                                     <button
                                         onClick={() => setActiveSettingsTab("profile")}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm ${activeSettingsTab === "profile"
-                                            ? "bg-white/10 text-white font-medium"
-                                            : "text-white/70 hover:text-white hover:bg-white/5"
-                                            }`}
+                                        className={`w-full flex ${
+                                            activeSettingsTab === "profile"
+                                                ? "bg-white/10 text-white"
+                                                : "text-white/70 hover:text-white hover:bg-white/5"
+                                        } rounded-lg transition-colors ${
+                                            "px-0 md:px-3 py-2.5 md:py-2"
+                                        }`}
                                     >
-                                        <div className="flex items-center">
+                                        <div className="md:hidden w-full flex justify-center">
+                                            <User className="w-5 h-5" />
+                                        </div>
+                                        
+                                        <div className="hidden md:flex items-center">
                                             <User className="w-4 h-4 mr-2" />
-                                            Profile
+                                            <span className="text-sm">Profile</span>
                                         </div>
                                     </button>
-
+                            
                                     <button
                                         onClick={() => setActiveSettingsTab("inbox")}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${activeSettingsTab === "inbox"
-                                            ? "bg-white/10 text-white font-medium"
-                                            : "text-white/70 hover:text-white hover:bg-white/5"
-                                            }`}
+                                        className={`w-full flex ${
+                                            activeSettingsTab === "inbox"
+                                                ? "bg-white/10 text-white"
+                                                : "text-white/70 hover:text-white hover:bg-white/5"
+                                        } rounded-lg transition-colors relative ${
+                                            "px-0 md:px-3 py-2.5 md:py-2"
+                                        }`}
                                     >
-                                        <div className="flex items-center">
-                                            <Mail className="w-4 h-4 mr-2" />
-                                            Inbox
+                                        <div className="md:hidden w-full flex justify-center">
+                                            <Mail className="w-5 h-5" />
+                                            {unreadSuggestions > 0 && (
+                                                <span className="absolute -top-1 -right-1 md:static md:ml-2 bg-red-500 text-white text-xs w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-black/20 shadow-lg">
+                                                    {unreadSuggestions}
+                                                </span>
+                                            )}
                                         </div>
-                                        {unreadSuggestions > 0 && (
-                                            <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                                                {unreadSuggestions}
-                                            </span>
-                                        )}
+                                        
+                                        <div className="hidden md:flex items-center justify-between w-full">
+                                            <div className="flex items-center">
+                                                <Mail className="w-4 h-4 mr-2" />
+                                                <span className="text-sm">Inbox</span>
+                                            </div>
+                                            {unreadSuggestions > 0 && (
+                                                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                                    {unreadSuggestions}
+                                                </span>
+                                            )}
+                                        </div>
                                     </button>
                                 </div>
-
+                            
                                 <div className="flex-grow"></div>
-
+                            
                                 <button
                                     onClick={logout}
-                                    className="w-full text-left px-3 py-2.5 mt-6 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center border border-red-500/10"
+                                    className={`w-full flex mt-6 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/10 rounded-lg transition-colors ${
+                                        "px-0 md:px-3 py-3 md:py-2.5"
+                                    }`}
                                 >
-                                    <LogOut className="w-4 h-4 mr-2" />
-                                    Sign out
+                                    <div className="md:hidden w-full flex justify-center">
+                                        <LogOut className="w-5 h-5" />
+                                    </div>
+                                    
+                                    <div className="hidden md:flex items-center">
+                                        <LogOut className="w-4 h-4 mr-2" />
+                                        <span className="text-sm">Sign out</span>
+                                    </div>
                                 </button>
                             </div>
 
@@ -2197,7 +2217,6 @@ export default function WatchLaterPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Lista de sugestões recebidas */}
                                             <div className="mb-8">
                                                 <h3 className="text-lg font-medium text-white mb-4 flex items-center">
                                                     <MessageSquare className="w-4 h-4 mr-2" />
@@ -2221,7 +2240,6 @@ export default function WatchLaterPage() {
                                                     <div className="space-y-4">
                                                         {inboxSuggestions
                                                             .sort((a, b) => {
-                                                                // Primeiro as não lidas, depois por data mais recente
                                                                 if (a.read !== b.read) return a.read ? 1 : -1;
                                                                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
                                                             })
@@ -2324,7 +2342,6 @@ export default function WatchLaterPage() {
                                                 )}
                                             </div>
 
-                                            {/* Lista de sugestões enviadas */}
                                             <div>
                                                 <h3 className="text-lg font-medium text-white/80 mb-4 flex items-center">
                                                     <ArrowLeft className="w-4 h-4 mr-2" />

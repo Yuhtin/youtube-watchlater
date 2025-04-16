@@ -51,13 +51,11 @@ export class UserController {
         @Body() body: { username: string },
         @Request() req
     ) {
-        // Verificar se o usuário está atualizando sua própria conta
         if (id !== req.user.userId) {
             throw new ForbiddenException('You can only update your own account');
         }
 
         try {
-            // Verificar se o novo nome de usuário já existe
             if (body.username) {
                 const existingUser = await this.userService.findByUsername(body.username);
                 if (existingUser && existingUser.id !== id) {
@@ -65,7 +63,6 @@ export class UserController {
                 }
             }
 
-            // Atualizar o usuário
             const updatedUser = await this.userService.updateUser(id, {
                 username: body.username
             });
@@ -94,13 +91,11 @@ export class UserController {
         @Body() body: { currentPassword: string; newPassword: string },
         @Request() req
     ) {
-        // Verificar se o usuário está atualizando sua própria conta
         if (id !== req.user.userId) {
             throw new ForbiddenException('You can only update your own account');
         }
 
         try {
-            // Validar senha atual
             const user = await this.userService.findById(id, true);
             const userWithPassword = user as any;
 
@@ -117,7 +112,6 @@ export class UserController {
                 throw new BadRequestException('Current password is incorrect');
             }
 
-            // Atualizar senha
             await this.userService.updateUser(id, {
                 password: body.newPassword
             });
