@@ -27,8 +27,6 @@ export class CardController {
     @UseGuards(JwtAuthGuard)
     @Post()
     async create(@Body() body: any, @Request() req) {
-        console.log('Sim tem:', req.user.userId)
-
         const result = await this.cardService.create({
             ...body,
             userId: req.user.userId,

@@ -329,12 +329,11 @@ export default function WatchLaterPage() {
         try {
             const response = await apiRequest('/playlists');
             if (response) {
-                console.log(response);
                 setPlaylists(response);
 
                 const playlistCards = response.map((playlist: { id: string; playlistId: string; title: string; thumbnailUrl: string; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
                     id: playlist.id,
-                    playlistId: playlist.playlistId,
+                    videoId: playlist.playlistId,
                     title: playlist.title,
                     thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
                     url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`,
@@ -359,7 +358,6 @@ export default function WatchLaterPage() {
                         }
                     });
 
-                    console.log(newColumns)
                     return newColumns;
                 });
             }
@@ -831,7 +829,7 @@ export default function WatchLaterPage() {
                         body: {
                             ...video,
                             status: "WATCH_LATER",
-                            playlistId,
+                            playlistId: playlistResponse.id,
                             userId,
                         },
                     });
@@ -887,7 +885,7 @@ export default function WatchLaterPage() {
         setActiveId(active.id);
 
         for (const [columnId, column] of Object.entries(columns)) {
-            const video = column.videos.find(v => v.id === active.id);
+            const video = column.videos.find(v => v.videoId === active.id);
             if (video) {
                 setActiveVideo(video);
                 break;
@@ -934,13 +932,13 @@ export default function WatchLaterPage() {
         setColumns(prev => {
             const newColumns = { ...prev };
 
-            const videoToMove = newColumns[sourceStatus].videos.find(v => v.id === activeId);
+            const videoToMove = newColumns[sourceStatus].videos.find(v => v.videoId === activeId);
 
             if (!videoToMove) return prev;
 
             newColumns[sourceStatus] = {
                 ...newColumns[sourceStatus],
-                videos: newColumns[sourceStatus].videos.filter(v => v.id !== activeId)
+                videos: newColumns[sourceStatus].videos.filter(v => v.videoId !== activeId)
             };
 
             newColumns[destinationStatus] = {
@@ -958,7 +956,6 @@ export default function WatchLaterPage() {
     };
 
     const disableDragForMainBoard = (itemId: string) => {
-        console.log(itemId)
         return itemId.toString().startsWith('playlist-');
     };
 
@@ -1022,7 +1019,7 @@ export default function WatchLaterPage() {
             setPlaylistActiveId(active.id);
 
             for (const [_, column] of Object.entries(playlistColumns)) {
-                const item = column.videos.find(v => v.id === active.id);
+                const item = column.videos.find(v => v.videoId === active.id);
                 if (item) {
                     setPlaylistActiveItem(item);
                     break;
@@ -1059,7 +1056,7 @@ export default function WatchLaterPage() {
             setSelectedPlaylist((prev: any) => {
                 const updatedPlaylist = { ...prev };
 
-                const videoToMove = updatedPlaylist.cards.find((v: any) => v.id === activeId);
+                const videoToMove = updatedPlaylist.cards.find((v: any) => v.videoId === activeId);
 
                 if (!videoToMove) return prev;
 

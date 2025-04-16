@@ -9,16 +9,12 @@ export class CardService {
 
     async create(data: any) {
         try {
-            console.log('Creating card with data:', data);
-
             const existingCard = await this.prisma.card.findFirst({
                 where: {
                     videoId: data.videoId,
                     userId: data.userId
                 }
             });
-
-            console.log('Existing card:', existingCard);
 
             if (existingCard) {
                 return {
@@ -40,8 +36,6 @@ export class CardService {
 
             return response;
         } catch (error) {
-            console.log('Error creating card:', error);
-
             if (error.code === 'P2002') {
                 return {
                     statusCode: 409,
