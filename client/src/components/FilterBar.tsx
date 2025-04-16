@@ -146,7 +146,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="bg-zinc-900/95 backdrop-blur-xl border border-white/20 text-white p-6 shadow-xl rounded-xl sm:max-w-md">
+        <DialogContent className="bg-zinc-900/95 backdrop-blur-xl border border-white/20 text-white p-6 shadow-xl rounded-xl sm:max-w-md" style={{ zIndex: 100 }}>
           <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold text-white">Filter Videos</h2>
