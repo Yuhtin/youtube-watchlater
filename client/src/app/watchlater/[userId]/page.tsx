@@ -964,6 +964,7 @@ export default function WatchLaterPage() {
         WATCHING: "▶️",
         WATCHED: "✅",
     };
+    
     const renderPlaylistKanban = () => {
         const playlistColumns: { [key: string]: KanbanColumn } = {
             WATCH_LATER: { id: "WATCH_LATER", title: "Watch Later", videos: [] },
@@ -1464,10 +1465,10 @@ export default function WatchLaterPage() {
     }, [columns, progressStartDate]);
 
     useEffect(() => {
-        if (activeSettingsTab === "stats") {
+        if (activeSettingsTab === "stats" && isSettingsModalOpen) {
             calculateStats();
         }
-    }, [activeSettingsTab, calculateStats]);
+    }, [activeSettingsTab, isSettingsModalOpen, columns]);
 
     return (
         <div className="min-h-screen bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">

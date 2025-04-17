@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -16,6 +16,8 @@ import {
 import { SortableItem } from "./SortableItem";
 import { DroppableColumn } from "./DroppableColumn";
 import { toast } from "sonner";
+import { FixedSizeList as List } from 'react-window';
+import { useInView } from 'react-intersection-observer';
 
 export interface CardItem {
     id: string;
@@ -140,20 +142,13 @@ export function KanbanBoard({
                                                 <p className="text-sm">{emptyStateSubMessage}</p>
                                             </div>
                                         ) : (
-                                            <div className="space-y-4">
-                                                {column.videos.filter(video => hidePlaylistVideos ? !video.playlistId : !!video.playlistId).map((video) => (
-                                                    <SortableItem
-                                                        key={video.videoId}
-                                                        id={video.videoId}
-                                                        video={video}
-                                                        status={column.id}
-                                                        onOpen={() => onItemOpen(column.id, video)}
-                                                        onRemove={() => onItemRemove(column.id, video.videoId)}
-                                                        disabled={disableDragFor(video.videoId)}
-                                                        isPlaylist={video.isPlaylist}
-                                                    />
-                                                ))}
-                                            </div>
+                                            <VirtualizedVideoList
+                                                videos={column.videos.filter(video => hidePlaylistVideos ? !video.playlistId : !!video.playlistId)}
+                                                columnId={column.id}
+                                                onOpen={onItemOpen}
+                                                onRemove={onItemRemove}
+                                                disableDragFor={disableDragFor}
+                                            />
                                         )}
                                     </div>
                                 </SortableContext>
@@ -185,5 +180,127 @@ export function KanbanBoard({
                 ) : null}
             </DragOverlay>
         </DndContext>
+    );
+}
+
+function VirtualizedVideoList(
+    {
+        videos,
+        columnId,
+        onOpen,
+        onRemove,
+        disableDragFor
+    }: {
+        videos: CardItem[];
+        columnId: string;
+        onOpen: (status: string, video: CardItem) => void;
+        onRemove: (status: string, videoId: string) => void;
+        disableDragFor: (itemId: string) => boolean;
+    }) {
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [containerHeight, setContainerHeight] = useState(500);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            setContainerHeight(containerRef.current.clientHeight);
+
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    setContainerHeight(entry.contentRect.height);
+                }
+            });
+
+            resizeObserver.observe(containerRef.current);
+            return () => {
+                if (containerRef.current) {
+                    resizeObserver.unobserve(containerRef.current);
+                }
+            };
+        }
+    }, []);
+
+    return (
+        <div ref={containerRef} className="h-full">
+            <List
+                height={containerHeight}
+                itemCount={videos.length}
+                itemSize={230}
+                width="100%"
+                overscanCount={1}
+            >
+                {({ index, style }) => {
+                    const video = videos[index];
+                    return (
+                        <div style={{ ...style, paddingBottom: '16px' }}>
+                            <LazyVideoItem
+                                key={video.videoId}
+                                id={video.videoId}
+                                video={video}
+                                status={columnId}
+                                onOpen={() => onOpen(columnId, video)}
+                                onRemove={() => onRemove(columnId, video.videoId)}
+                                disabled={disableDragFor(video.videoId)}
+                                isPlaylist={video.isPlaylist ?? false}
+                            />
+                        </div>
+                    );
+                }}
+            </List>
+        </div>
+    );
+}
+
+function LazyVideoItem(
+    {
+        id,
+        video,
+        status,
+        onOpen,
+        onRemove,
+        disabled,
+        isPlaylist
+    }: {
+        id: string,
+        video: CardItem,
+        status: string,
+        onOpen: () => void,
+        onRemove: () => void,
+        disabled: boolean,
+        isPlaylist: boolean
+    }) {
+    const { ref, inView } = useInView({
+        threshold: 0,
+        triggerOnce: false,
+        rootMargin: '200px 0px',
+    });
+
+    return (
+        <div ref={ref}>
+            {inView ? (
+                <SortableItem
+                    id={id}
+                    video={video}
+                    status={status}
+                    onOpen={onOpen}
+                    onRemove={onRemove}
+                    disabled={disabled}
+                    isPlaylist={isPlaylist}
+                />
+            ) : (
+                <div
+                    className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden shadow-md"
+                    style={{ height: '50px' }}
+                >
+                    <div className="animate-pulse flex">
+                        <div className="h-20 w-32 bg-white/5"></div>
+                        <div className="flex-1 p-3 space-y-2">
+                            <div className="h-3 bg-white/5 rounded w-3/4"></div>
+                            <div className="h-3 bg-white/5 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
