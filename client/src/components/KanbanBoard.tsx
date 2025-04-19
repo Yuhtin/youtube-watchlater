@@ -227,7 +227,7 @@ function VirtualizedVideoList(
                 itemCount={videos.length}
                 itemSize={230}
                 width="100%"
-                overscanCount={1}
+                overscanCount={3}
             >
                 {({ index, style }) => {
                     const video = videos[index];
