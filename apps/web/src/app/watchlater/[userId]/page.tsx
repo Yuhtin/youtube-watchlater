@@ -1377,105 +1377,96 @@ export default function WatchLaterPage() {
                 <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl p-6">
-                        <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
-                            <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                            Delete Account
-                        </Dialog.Title>
-
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
-                            <p className="text-white/90 text-sm">
-                                This action <span className="font-bold text-red-400">cannot be undone</span>.
-                                All your data, including your videos and preferences will be permanently deleted.
-                            </p>
+                    <Dialog.Panel className="w-full max-w-md bg-paper border-2 border-ink shadow-brutal-red">
+                        <div className="border-b-2 border-ink p-2 px-3 flex justify-between text-[11px] font-bold">
+                            <span>▶ DELETE_ACCOUNT</span>
+                            <button onClick={() => !isDeleting && setIsDeleteModalOpen(false)}>[x]</button>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">
-                                    Confirm your username
-                                </label>
-                                <input
-                                    type="text"
-                                    value={deleteUsername}
-                                    onChange={(e) => setDeleteUsername(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
-                                    placeholder="Enter your username"
-                                    disabled={isDeleting}
-                                />
+                        <div className="p-4">
+                            <div className="border-2 border-accent bg-accent/5 p-3 mb-4">
+                                <p className="text-[11px] font-mono">
+                                    This action <span className="font-bold text-accent">cannot be undone</span>.
+                                    All your data, including your videos and preferences will be permanently deleted.
+                                </p>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">
-                                    Confirm your password
-                                </label>
-                                <div className="relative">
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold mb-2">CONFIRM USERNAME</label>
                                     <input
-                                        type={showPassword ? "text" : "password"}
-                                        value={deletePassword}
-                                        onChange={(e) => setDeletePassword(e.target.value)}
-                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40 pr-10"
-                                        placeholder="Enter your password"
+                                        type="text"
+                                        value={deleteUsername}
+                                        onChange={(e) => setDeleteUsername(e.target.value)}
+                                        className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
+                                        placeholder="Enter your username"
                                         disabled={isDeleting}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
-                                    >
-                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold mb-2">CONFIRM PASSWORD</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            value={deletePassword}
+                                            onChange={(e) => setDeletePassword(e.target.value)}
+                                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono pr-8"
+                                            placeholder="Enter your password"
+                                            disabled={isDeleting}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-ink/50 hover:text-ink"
+                                        >
+                                            {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold mb-2">SECURITY VERIFICATION</label>
+                                    <div className="mb-2 p-2 bg-ink/5 border-1.5 border-ink font-mono text-[12px] tracking-wider">
+                                        {generatedCode}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={deleteConfirmationCode}
+                                        onChange={(e) => setDeleteConfirmationCode(e.target.value)}
+                                        className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
+                                        placeholder="Type the code exactly as shown above"
+                                        disabled={isDeleting}
+                                    />
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-white/70 mb-1">
-                                    Security verification
-                                </label>
-                                <div className="mb-2 p-3 bg-white/10 border border-white/5 rounded font-mono text-sm text-white tracking-wider">
-                                    {generatedCode}
-                                </div>
-                                <input
-                                    type="text"
-                                    value={deleteConfirmationCode}
-                                    onChange={(e) => setDeleteConfirmationCode(e.target.value)}
-                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/40"
-                                    placeholder="Type the code exactly as shown above"
+                            <div className="flex gap-1.5 mt-4">
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    className={`flex-1 bg-accent text-paper px-4 py-2 text-[11px] font-bold border-2 border-accent shadow-brutal-red flex items-center justify-center disabled:opacity-50`}
+                                    disabled={isDeleting || !deleteUsername || !deletePassword || !deleteConfirmationCode}
+                                >
+                                    {isDeleting ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-paper" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            DELETING...
+                                        </>
+                                    ) : (
+                                        <>▶ DELETE FOREVER</>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setIsDeleteModalOpen(false)}
+                                    className="border-2 border-ink px-3 py-2 text-[11px] font-bold"
                                     disabled={isDeleting}
-                                />
+                                >
+                                    CANCEL
+                                </button>
                             </div>
-                        </div>
-
-                        <div className="mt-8 flex justify-between">
-                            <button
-                                onClick={() => setIsDeleteModalOpen(false)}
-                                className="px-4 py-2 text-white/70 hover:text-white transition-colors"
-                                disabled={isDeleting}
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                onClick={handleDeleteAccount}
-                                className={`px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center justify-center transition-colors ${isDeleting ? 'opacity-70 cursor-not-allowed' : ''
-                                    }`}
-                                disabled={isDeleting || !deleteUsername || !deletePassword || !deleteConfirmationCode}
-                            >
-                                {isDeleting ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Delete Forever
-                                    </>
-                                )}
-                            </button>
                         </div>
                     </Dialog.Panel>
                 </div>
@@ -1491,74 +1482,52 @@ export default function WatchLaterPage() {
                         <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
 
                         <div className="fixed inset-0 flex items-center justify-center p-4">
-                            <Dialog.Panel className="w-full max-w-5xl h-[80vh] rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl overflow-hidden">
-                                <div className="h-full flex flex-col">
-                                    <div className="p-5 border-b border-white/20 flex justify-between items-center bg-white/5 backdrop-blur-sm">
-                                        <div className="flex items-center">
-                                            <div className="w-12 h-12 rounded overflow-hidden mr-4">
-                                                <img
-                                                    src={selectedPlaylist.thumbnailUrl || 'https://via.placeholder.com/48'}
-                                                    alt={selectedPlaylist.title}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div>
-                                                <Dialog.Title className="text-xl font-bold text-white flex items-center">
-                                                    <ListVideo className="h-5 w-5 text-purple-400 mr-2" />
-                                                    {selectedPlaylist.title}
-                                                </Dialog.Title>
-                                                <p className="text-white/60 text-sm">
-                                                    {selectedPlaylist._count?.cards || 0} videos
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <a
-                                                    href={`https://www.youtube.com/playlist?list=${selectedPlaylist.playlistId}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="ml-3 inline-flex items-center backdrop-blur-md bg-red-500/40 hover:bg-red-500/60 text-white text-xs px-3 py-1 rounded-full border border-red-400/30 shadow-lg transition-all duration-300"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                    }}
-                                                >
-                                                    <Youtube className="w-3 h-3 mr-1.5" />
-                                                    Open on YouTube
-                                                </a>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
+                            <Dialog.Panel className="w-full max-w-5xl h-[80vh] bg-paper border-2 border-ink shadow-brutal-red overflow-hidden flex flex-col">
+                                <div className="border-b-2 border-ink p-2 px-3 flex justify-between items-center text-[11px] font-bold flex-shrink-0">
+                                    <div className="flex items-center gap-2">
+                                        <span>▶ PLAYLIST</span>
+                                        <span className="font-mono text-ink/60 truncate max-w-xs">{selectedPlaylist.title}</span>
+                                        <span className="font-mono text-ink/40">· {selectedPlaylist._count?.cards || 0} videos</span>
+                                        <a
+                                            href={`https://www.youtube.com/playlist?list=${selectedPlaylist.playlistId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center border-1.5 border-accent text-accent text-[10px] font-mono px-2 py-0.5 hover:bg-accent hover:text-paper transition-colors"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <Youtube className="w-3 h-3 mr-1" />
+                                            YT
+                                        </a>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
+                                                    removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.playlistId}`);
                                                     setSelectedPlaylist(null);
-                                                }}
-                                                className="text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors md:order-2"
-                                                title="Close"
-                                            >
-                                                <X className="h-5 w-5" />
-                                            </button>
-                                            
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-
-                                                    if (confirm(`Are you sure you want to delete the playlist "${selectedPlaylist.title}"?`)) {
-                                                        removeVideo("WATCH_LATER", `playlist-${selectedPlaylist.playlistId}`);
-                                                        setSelectedPlaylist(null);
-                                                    }
-                                                }}
-                                                className="text-white/70 hover:text-red-400 p-2 rounded-full hover:bg-white/10 mr-2 md:mr-0 md:order-1 transition-colors"
-                                                title="Delete playlist"
-                                            >
-                                                <Trash2 className="h-5 w-5" />
-                                            </button>
-                                        </div>
+                                                }
+                                            }}
+                                            className="text-accent hover:bg-accent hover:text-paper p-1 transition-colors"
+                                            title="Delete playlist"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedPlaylist(null);
+                                            }}
+                                            className="font-bold"
+                                            title="Close"
+                                        >
+                                            [x]
+                                        </button>
                                     </div>
+                                </div>
 
-                                    <div className="flex-grow overflow-y-auto p-5">
-                                        {selectedPlaylist && renderPlaylistKanban()}
-                                    </div>
+                                <div className="flex-grow overflow-y-auto p-4">
+                                    {selectedPlaylist && renderPlaylistKanban()}
                                 </div>
                             </Dialog.Panel>
                         </div>
@@ -1574,137 +1543,131 @@ export default function WatchLaterPage() {
                 <div className="fixed inset-0 bg-black/70" aria-hidden="true" />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="w-full max-w-md rounded-2xl bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/20 shadow-xl p-6">
-                        <Dialog.Title className="text-xl font-bold text-white mb-2 flex items-center">
-                            <List className="h-5 w-5 text-blue-500 mr-2" />
-                            Bulk Add Videos
-                        </Dialog.Title>
-
-                        <div className="space-y-4">
-                            <textarea
-                                value={bulkUrls}
-                                onChange={(e) => setBulkUrls(e.target.value)}
-                                className="w-full h-40 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                                placeholder="Paste YouTube URLs here, one per line"
-                                disabled={isProcessing}
-                            />
-
-                            {showResults && (
-                                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                                    <p className="text-white/90 text-sm">
-                                        <span className="font-bold text-blue-400">{processedResults.success}</span> videos added successfully.
-                                    </p>
-                                    <p className="text-white/90 text-sm">
-                                        <span className="font-bold text-yellow-400">{processedResults.duplicates}</span> duplicates found.
-                                    </p>
-                                    <p className="text-white/90 text-sm">
-                                        <span className="font-bold text-red-400">{processedResults.failed}</span> failed to add.
-                                    </p>
-                                </div>
-                            )}
+                    <Dialog.Panel className="w-full max-w-md bg-paper border-2 border-ink shadow-brutal-red">
+                        <div className="border-b-2 border-ink p-2 px-3 flex justify-between text-[11px] font-bold">
+                            <span>▶ BULK_ADD_VIDEOS</span>
+                            <button onClick={() => !isProcessing && setIsBulkAddModalOpen(false)}>[x]</button>
                         </div>
 
-                        <div className="mt-8 flex justify-between">
-                            <button
-                                onClick={() => setIsBulkAddModalOpen(false)}
-                                className="px-4 py-2 text-white/70 hover:text-white transition-colors"
-                                disabled={isProcessing}
-                            >
-                                Cancel
-                            </button>
+                        <div className="p-4">
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold mb-2">YOUTUBE URLS (ONE PER LINE)</label>
+                                    <textarea
+                                        value={bulkUrls}
+                                        onChange={(e) => setBulkUrls(e.target.value)}
+                                        className="w-full h-40 border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono resize-none"
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                        disabled={isProcessing}
+                                    />
+                                </div>
 
-                            <button
-                                onClick={() => {
-                                    setIsProcessing(true);
-                                    setShowResults(false);
-
-                                    const urls = bulkUrls.split('\n').filter(url => url.trim());
-
-                                    let successCount = 0;
-                                    let failedCount = 0;
-                                    let duplicateCount = 0;
-
-                                    const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
-
-                                    Promise.all(urls.map(async url => {
-                                        const { id, isPlaylist } = extractVideoId(url.trim());
-
-                                        if (!id || isPlaylist) {
-                                            failedCount++;
-                                            return Promise.resolve();
-                                        }
-
-                                        const data = await fetchVideoInfo(id);
-                                        if (!data) {
-                                            toast.dismiss(loadingToast);
-                                            toast.error("Failed to fetch video info", {
-                                                description: "Please check the URL and try again"
-                                            });
-                                            return;
-                                        }
-
-                                        const { title, durationSeconds } = data;
-
-                                        const newVideo = {
-                                            videoId: id,
-                                            title,
-                                            thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
-                                            url: `https://www.youtube.com/watch?v=${id}`,
-                                            status: "WATCH_LATER",
-                                            userId: userId,
-                                            durationSeconds: durationSeconds || null,
-                                        };
-
-                                        return apiRequest('/cards', {
-                                            method: "POST",
-                                            body: newVideo,
-                                        }).then(response => {
-                                            if (response.statusCode === 409) {
-                                                duplicateCount++;
-                                            } else if (response.videoId) {
-                                                successCount++;
-                                            } else {
-                                                failedCount++;
-                                            }
-                                        }).catch(() => {
-                                            failedCount++;
-                                        });
-                                    })).then(() => {
-                                        toast.dismiss(loadingToast);
-
-                                        setProcessedResults({
-                                            success: successCount,
-                                            failed: failedCount,
-                                            duplicates: duplicateCount
-                                        });
-
-                                        setShowResults(true);
-                                        setIsProcessing(false);
-
-                                        if (successCount > 0) {
-                                            fetchColumns();
-                                        }
-                                    });
-                                }}
-                                className={`px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''
-                                    }`}
-                                disabled={isProcessing || !bulkUrls.trim()}
-                            >
-                                {isProcessing ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Processing...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Videos
-                                    </>
+                                {showResults && (
+                                    <div className="border-1.5 border-ink bg-ink/5 p-3 font-mono text-[11px] space-y-1">
+                                        <p><span className="font-bold">{processedResults.success}</span> videos added.</p>
+                                        <p><span className="font-bold">{processedResults.duplicates}</span> duplicates found.</p>
+                                        <p><span className="font-bold text-accent">{processedResults.failed}</span> failed.</p>
+                                    </div>
                                 )}
-                            </button>
+                            </div>
+
+                            <div className="flex gap-1.5 mt-3">
+                                <button
+                                    onClick={() => {
+                                        setIsProcessing(true);
+                                        setShowResults(false);
+
+                                        const urls = bulkUrls.split('\n').filter(url => url.trim());
+
+                                        let successCount = 0;
+                                        let failedCount = 0;
+                                        let duplicateCount = 0;
+
+                                        const loadingToast = toast.loading(`Processing ${urls.length} videos...`);
+
+                                        Promise.all(urls.map(async url => {
+                                            const { id, isPlaylist } = extractVideoId(url.trim());
+
+                                            if (!id || isPlaylist) {
+                                                failedCount++;
+                                                return Promise.resolve();
+                                            }
+
+                                            const data = await fetchVideoInfo(id);
+                                            if (!data) {
+                                                toast.dismiss(loadingToast);
+                                                toast.error("Failed to fetch video info", {
+                                                    description: "Please check the URL and try again"
+                                                });
+                                                return;
+                                            }
+
+                                            const { title, durationSeconds } = data;
+
+                                            const newVideo = {
+                                                videoId: id,
+                                                title,
+                                                thumbnailUrl: `https://img.youtube.com/vi/${id}/0.jpg`,
+                                                url: `https://www.youtube.com/watch?v=${id}`,
+                                                status: "WATCH_LATER",
+                                                userId: userId,
+                                                durationSeconds: durationSeconds || null,
+                                            };
+
+                                            return apiRequest('/cards', {
+                                                method: "POST",
+                                                body: newVideo,
+                                            }).then(response => {
+                                                if (response.statusCode === 409) {
+                                                    duplicateCount++;
+                                                } else if (response.videoId) {
+                                                    successCount++;
+                                                } else {
+                                                    failedCount++;
+                                                }
+                                            }).catch(() => {
+                                                failedCount++;
+                                            });
+                                        })).then(() => {
+                                            toast.dismiss(loadingToast);
+
+                                            setProcessedResults({
+                                                success: successCount,
+                                                failed: failedCount,
+                                                duplicates: duplicateCount
+                                            });
+
+                                            setShowResults(true);
+                                            setIsProcessing(false);
+
+                                            if (successCount > 0) {
+                                                fetchColumns();
+                                            }
+                                        });
+                                    }}
+                                    className="flex-1 bg-ink text-paper px-4 py-2 text-[11px] font-bold border-2 border-ink shadow-brutal-red flex items-center justify-center disabled:opacity-50"
+                                    disabled={isProcessing || !bulkUrls.trim()}
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-3.5 w-3.5 text-paper" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            PROCESSING...
+                                        </>
+                                    ) : (
+                                        <>▶ ADD VIDEOS</>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setIsBulkAddModalOpen(false)}
+                                    className="border-2 border-ink px-3 py-2 text-[11px] font-bold"
+                                    disabled={isProcessing}
+                                >
+                                    CANCEL
+                                </button>
+                            </div>
                         </div>
                     </Dialog.Panel>
                 </div>
@@ -1716,99 +1679,63 @@ export default function WatchLaterPage() {
                 className="relative z-[100]"
             >
                 <div
-                    className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/70"
                     aria-hidden="true"
                     onClick={() => setIsSettingsModalOpen(false)}
                 />
 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel
-                        className="w-full max-w-3xl h-[85vh] rounded-2xl shadow-xl overflow-hidden"
-                        style={{
-                            background: `linear-gradient(180deg, ${userColorLight}, rgba(20,0,25,50))`,
-                            backdropFilter: 'blur(12px)',
-                            WebkitBackdropFilter: 'blur(12px)',
-                            boxShadow: `0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px ${userColorBorder}, 0 0 20px ${userColorLight}`,
-                            border: `1px solid ${userColor}`
-                        }}
-                    >
-                        <div
-                            className="absolute inset-0 rounded-2xl pointer-events-none"
-                            style={{
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                boxShadow: `
-                                    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1),
-                                    0 0 0 1px rgba(0, 0, 0, 0.15),
-                                    0 8px 32px rgba(0, 0, 0, 0.4)
-                                `
-                            }}
-                        ></div>
+                    <Dialog.Panel className="w-full max-w-3xl h-[85vh] bg-paper border-2 border-ink shadow-brutal-red overflow-hidden flex flex-col">
+                        <div className="border-b-2 border-ink p-2 px-3 flex justify-between items-center text-[11px] font-bold flex-shrink-0">
+                            <span>▶ SETTINGS</span>
+                            <button onClick={() => setIsSettingsModalOpen(false)}>[x]</button>
+                        </div>
 
-                        <button
-                            onClick={() => setIsSettingsModalOpen(false)}
-                            className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-20"
-                            aria-label="Close settings"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-
-                        <div className="relative h-full flex overflow-hidden z-10">
-                            <div className="w-16 md:w-60 p-4 md:p-5 flex flex-col backdrop-blur-md bg-black/20 border-r border-white/10">
-                                <Dialog.Title
-                                    className="text-lg font-bold mb-6 hidden md:flex items-center text-white"
-                                >
-                                    <Settings className="mr-2 h-5 w-5" />
-                                    Settings
+                        <div className="relative flex-1 flex overflow-hidden">
+                            <div className="w-12 md:w-48 flex flex-col border-r-2 border-ink bg-ink/5">
+                                <Dialog.Title className="text-[10px] font-bold mb-2 hidden md:block px-3 pt-3 uppercase tracking-wide text-ink/50">
+                                    Navigation
                                 </Dialog.Title>
 
-                                <div className="flex justify-center md:hidden mb-6">
-                                    <Settings className="h-5 w-5 text-white" />
-                                </div>
-
-                                <div className="space-y-3">
+                                <div className="space-y-0.5 p-1 md:p-2">
                                     <button
                                         onClick={() => setActiveSettingsTab("profile")}
-                                        className={`w-full flex ${activeSettingsTab === "profile"
-                                            ? "bg-white/10 text-white"
-                                            : "text-white/70 hover:text-white hover:bg-white/5"
-                                            } rounded-lg transition-colors ${"px-0 md:px-3 py-2.5 md:py-2"
-                                            }`}
+                                        className={`w-full flex text-[10px] font-bold font-mono transition-colors border ${activeSettingsTab === "profile"
+                                            ? "bg-ink text-paper border-ink"
+                                            : "border-transparent text-ink/60 hover:text-ink hover:border-ink/30"
+                                            } px-1 md:px-2 py-1.5`}
                                     >
                                         <div className="md:hidden w-full flex justify-center">
-                                            <User className="w-5 h-5" />
+                                            <User className="w-4 h-4" />
                                         </div>
-
                                         <div className="hidden md:flex items-center">
-                                            <User className="w-4 h-4 mr-2" />
-                                            <span className="text-sm">Profile</span>
+                                            <User className="w-3 h-3 mr-1.5" />
+                                            PROFILE
                                         </div>
                                     </button>
 
                                     <button
                                         onClick={() => setActiveSettingsTab("inbox")}
-                                        className={`w-full flex ${activeSettingsTab === "inbox"
-                                            ? "bg-white/10 text-white"
-                                            : "text-white/70 hover:text-white hover:bg-white/5"
-                                            } rounded-lg transition-colors relative ${"px-0 md:px-3 py-2.5 md:py-2"
-                                            }`}
+                                        className={`w-full flex text-[10px] font-bold font-mono transition-colors border relative ${activeSettingsTab === "inbox"
+                                            ? "bg-ink text-paper border-ink"
+                                            : "border-transparent text-ink/60 hover:text-ink hover:border-ink/30"
+                                            } px-1 md:px-2 py-1.5`}
                                     >
                                         <div className="md:hidden w-full flex justify-center">
-                                            <Mail className="w-5 h-5" />
+                                            <Mail className="w-4 h-4" />
                                             {unreadSuggestions > 0 && (
-                                                <span className="absolute -top-1 -right-1 md:static md:ml-2 bg-red-500 text-white text-xs w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-black/20 shadow-lg">
+                                                <span className="absolute -top-1 -right-1 bg-accent text-paper text-[8px] w-3.5 h-3.5 flex items-center justify-center font-bold">
                                                     {unreadSuggestions}
                                                 </span>
                                             )}
                                         </div>
-
-
                                         <div className="hidden md:flex items-center justify-between w-full">
                                             <div className="flex items-center">
-                                                <Mail className="w-4 h-4 mr-2" />
-                                                <span className="text-sm">Inbox</span>
+                                                <Mail className="w-3 h-3 mr-1.5" />
+                                                INBOX
                                             </div>
                                             {unreadSuggestions > 0 && (
-                                                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                                <span className="bg-accent text-paper text-[8px] px-1 py-0.5 font-bold">
                                                     {unreadSuggestions}
                                                 </span>
                                             )}
@@ -1817,49 +1744,47 @@ export default function WatchLaterPage() {
 
                                     <button
                                         onClick={() => setActiveSettingsTab("stats")}
-                                        className={`w-full flex ${activeSettingsTab === "stats"
-                                            ? "bg-white/10 text-white"
-                                            : "text-white/70 hover:text-white hover:bg-white/5"
-                                            } rounded-lg transition-colors relative ${"px-0 md:px-3 py-2.5 md:py-2"
-                                            }`}
+                                        className={`w-full flex text-[10px] font-bold font-mono transition-colors border ${activeSettingsTab === "stats"
+                                            ? "bg-ink text-paper border-ink"
+                                            : "border-transparent text-ink/60 hover:text-ink hover:border-ink/30"
+                                            } px-1 md:px-2 py-1.5`}
                                     >
                                         <div className="md:hidden w-full flex justify-center">
-                                            <BarChart2 className="w-5 h-5" />
+                                            <BarChart2 className="w-4 h-4" />
                                         </div>
-
                                         <div className="hidden md:flex items-center">
-                                            <BarChart2 className="w-4 h-4 mr-2" />
-                                            <span className="text-sm">Statistics</span>
+                                            <BarChart2 className="w-3 h-3 mr-1.5" />
+                                            STATS
                                         </div>
                                     </button>
                                 </div>
 
                                 <div className="flex-grow"></div>
 
-                                <button
-                                    onClick={logout}
-                                    className={`w-full flex mt-6 text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/10 rounded-lg transition-colors ${"px-0 md:px-3 py-3 md:py-2.5"
-                                        }`}
-                                >
-                                    <div className="md:hidden w-full flex justify-center">
-                                        <LogOut className="w-5 h-5" />
-                                    </div>
-
-                                    <div className="hidden md:flex items-center">
-                                        <LogOut className="w-4 h-4 mr-2" />
-                                        <span className="text-sm">Sign out</span>
-                                    </div>
-                                </button>
+                                <div className="p-1 md:p-2 border-t-2 border-ink">
+                                    <button
+                                        onClick={logout}
+                                        className="w-full flex text-[10px] font-bold font-mono text-accent hover:bg-accent hover:text-paper border border-accent transition-colors px-1 md:px-2 py-1.5"
+                                    >
+                                        <div className="md:hidden w-full flex justify-center">
+                                            <LogOut className="w-4 h-4" />
+                                        </div>
+                                        <div className="hidden md:flex items-center">
+                                            <LogOut className="w-3 h-3 mr-1.5" />
+                                            SIGN OUT
+                                        </div>
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto backdrop-blur-lg bg-white/5">
+                            <div className="flex-1 overflow-y-auto bg-paper">
                                 {activeSettingsTab === "profile" && (
-                                    <div className="p-6">
-                                        <h2 className="text-xl font-semibold text-white mb-8">Profile Settings</h2>
+                                    <div className="p-4">
+                                        <h2 className="text-[11px] font-bold uppercase tracking-wide mb-4 border-b-2 border-ink pb-1">Profile Settings</h2>
 
-                                        <div className="flex flex-col items-center mb-8">
+                                        <div className="flex flex-col items-center mb-6">
                                             <div className="relative group">
-                                                <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center bg-black/20 border-2 border-white/20">
+                                                <div className="w-20 h-20 overflow-hidden flex items-center justify-center bg-ink/10 border-2 border-ink">
                                                     {profileImagePreview ? (
                                                         <img
                                                             src={profileImagePreview}
@@ -1867,16 +1792,16 @@ export default function WatchLaterPage() {
                                                             className="w-full h-full object-cover"
                                                         />
                                                     ) : (
-                                                        <div className="text-white text-3xl font-semibold">
+                                                        <div className="text-ink text-2xl font-black font-display">
                                                             {username?.charAt(0)?.toUpperCase() || "U"}
                                                         </div>
                                                     )}
                                                 </div>
                                                 <button
                                                     onClick={() => fileInputRef.current?.click()}
-                                                    className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center shadow-lg text-white transition-colors"
+                                                    className="absolute bottom-0 right-0 w-7 h-7 bg-ink text-paper flex items-center justify-center border-2 border-ink"
                                                 >
-                                                    <Camera className="w-4 h-4" />
+                                                    <Camera className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                             <input
@@ -1894,54 +1819,50 @@ export default function WatchLaterPage() {
                                             />
 
                                             {profileImageFile && (
-                                                <div className="mt-3 flex items-center">
+                                                <div className="mt-2 flex items-center gap-1.5">
                                                     <button
                                                         onClick={async () => {
                                                             /* função existente */
                                                         }}
-                                                        className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1.5 rounded-lg transition-colors"
+                                                        className="flex items-center gap-1 bg-ink text-paper text-[10px] font-bold px-2 py-1 border-2 border-ink shadow-brutal-red"
                                                     >
-                                                        <UploadCloud className="w-3.5 h-3.5" />
-                                                        Save Image
+                                                        <UploadCloud className="w-3 h-3" />
+                                                        ▶ SAVE IMAGE
                                                     </button>
                                                     <button
                                                         onClick={() => {
                                                             setProfileImageFile(null);
                                                             setProfileImagePreview(userImage);
                                                         }}
-                                                        className="ml-2 text-white/70 hover:text-white text-sm"
+                                                        className="border-2 border-ink text-[10px] font-bold px-2 py-1"
                                                     >
-                                                        Cancel
+                                                        CANCEL
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-4">
                                             <div>
-                                                <h3 className="text-lg font-medium text-white mb-4">Change Username</h3>
-                                                <div className="space-y-4">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-3">Change Username</h3>
+                                                <div className="space-y-2">
                                                     <div>
-                                                        <label className="block text-sm text-white/70 mb-1.5">
-                                                            Current Username
-                                                        </label>
+                                                        <label className="block text-[10px] font-bold mb-1.5">CURRENT USERNAME</label>
                                                         <input
                                                             type="text"
                                                             value={username}
                                                             disabled
-                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                            className="w-full border-1.5 border-ink bg-ink/5 px-2 py-1.5 text-[12px] font-mono opacity-60"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm text-white/70 mb-1.5">
-                                                            New Username
-                                                        </label>
+                                                        <label className="block text-[10px] font-bold mb-1.5">NEW USERNAME</label>
                                                         <input
                                                             type="text"
                                                             value={newUsername}
                                                             onChange={(e) => setNewUsername(e.target.value)}
                                                             placeholder="Enter new username"
-                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                                                         />
                                                     </div>
                                                     {newUsername && (
@@ -1949,51 +1870,45 @@ export default function WatchLaterPage() {
                                                             onClick={async () => {
                                                                 /* função existente */
                                                             }}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                                                            className="bg-ink text-paper px-3 py-1.5 text-[10px] font-bold border-2 border-ink shadow-brutal-red"
                                                         >
-                                                            Update Username
+                                                            ▶ UPDATE USERNAME
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
-                                                <div className="space-y-4">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-3">Change Password</h3>
+                                                <div className="space-y-2">
                                                     <div>
-                                                        <label className="block text-sm text-white/70 mb-1.5">
-                                                            Current Password
-                                                        </label>
+                                                        <label className="block text-[10px] font-bold mb-1.5">CURRENT PASSWORD</label>
                                                         <input
                                                             type="password"
                                                             value={currentPassword}
                                                             onChange={(e) => setCurrentPassword(e.target.value)}
                                                             placeholder="Enter current password"
-                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm text-white/70 mb-1.5">
-                                                            New Password
-                                                        </label>
+                                                        <label className="block text-[10px] font-bold mb-1.5">NEW PASSWORD</label>
                                                         <input
                                                             type="password"
                                                             value={newPassword}
                                                             onChange={(e) => setNewPassword(e.target.value)}
                                                             placeholder="Enter new password"
-                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="block text-sm text-white/70 mb-1.5">
-                                                            Confirm New Password
-                                                        </label>
+                                                        <label className="block text-[10px] font-bold mb-1.5">CONFIRM NEW PASSWORD</label>
                                                         <input
                                                             type="password"
                                                             value={confirmNewPassword}
                                                             onChange={(e) => setConfirmNewPassword(e.target.value)}
                                                             placeholder="Confirm new password"
-                                                            className="w-full px-4 py-2.5 bg-black/10 backdrop-blur-md border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                                                         />
                                                     </div>
                                                     {currentPassword && newPassword && confirmNewPassword && (
@@ -2001,26 +1916,26 @@ export default function WatchLaterPage() {
                                                             onClick={async () => {
                                                                 /* função existente */
                                                             }}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                                                            className="bg-ink text-paper px-3 py-1.5 text-[10px] font-bold border-2 border-ink shadow-brutal-red disabled:opacity-50"
                                                             disabled={!currentPassword || !newPassword || !confirmNewPassword || newPassword !== confirmNewPassword}
                                                         >
-                                                            Update Password
+                                                            ▶ UPDATE PASSWORD
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
 
-                                            <div className="pt-8 border-t border-white/10">
-                                                <h3 className="text-lg font-medium text-red-400 mb-2">Danger Zone</h3>
-                                                <p className="text-white/50 text-sm mb-4">
+                                            <div className="pt-4 border-t-2 border-ink">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-2 text-accent">Danger Zone</h3>
+                                                <p className="text-[10px] font-mono text-ink/50 mb-3">
                                                     Once you delete your account, there is no going back. This action cannot be undone.
                                                 </p>
                                                 <button
                                                     onClick={openDeleteModal}
-                                                    className="flex items-center gap-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg text-sm border border-red-500/20 transition-colors"
+                                                    className="flex items-center gap-1.5 bg-accent text-paper px-3 py-1.5 text-[10px] font-bold border-2 border-accent shadow-brutal-red"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Delete Account
+                                                    <Trash2 className="w-3 h-3" />
+                                                    DELETE ACCOUNT
                                                 </button>
                                             </div>
                                         </div>
@@ -2029,26 +1944,24 @@ export default function WatchLaterPage() {
 
                                 {activeSettingsTab === "inbox" && (
                                     <div className="flex flex-col h-full">
-                                        <div className="bg-black/20 p-6 border-b border-white/10">
-                                            <h2 className="text-xl font-semibold text-white">Video Suggestions</h2>
-                                            <p className="text-white/60 text-sm mt-1">
+                                        <div className="p-4 border-b-2 border-ink">
+                                            <h2 className="text-[11px] font-bold uppercase tracking-wide">Video Suggestions</h2>
+                                            <p className="text-[10px] font-mono text-ink/50 mt-0.5">
                                                 Share and receive video suggestions with other users.
                                             </p>
                                         </div>
 
-                                        <div className="p-6 flex-grow overflow-y-auto">
-                                            <div className="mb-8">
-                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                                    <Send className="w-4 h-4 mr-2" />
+                                        <div className="p-4 flex-grow overflow-y-auto space-y-4">
+                                            <div>
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-2 flex items-center">
+                                                    <Send className="w-3 h-3 mr-1.5" />
                                                     Send a Suggestion
                                                 </h3>
 
-                                                <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-4">
-                                                    <div className="space-y-4">
+                                                <div className="border-1.5 border-ink bg-ink/5 p-3">
+                                                    <div className="space-y-3">
                                                         <div>
-                                                            <label className="block text-sm text-white/70 mb-2">
-                                                                To User
-                                                            </label>
+                                                            <label className="block text-[10px] font-bold mb-1.5">TO USER</label>
                                                             <div className="relative">
                                                                 <input
                                                                     type="text"
@@ -2059,46 +1972,41 @@ export default function WatchLaterPage() {
                                                                         searchUsers(e.target.value);
                                                                     }}
                                                                     placeholder="Search by username"
-                                                                    className="w-full pl-9 pr-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                                    className="w-full border-1.5 border-ink bg-white pl-7 pr-7 py-1.5 text-[12px] font-mono"
                                                                     disabled={!!selectedUser}
                                                                 />
-                                                                <UserSearch className="absolute left-3 top-3 h-4 w-4 text-white/50" />
+                                                                <UserSearch className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink/40" />
 
                                                                 {sendToUsername && !selectedUser && (
                                                                     <button
-                                                                        className="absolute right-2 top-2 text-white/50 hover:text-white p-1"
+                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink"
                                                                         onClick={() => {
                                                                             setSendToUsername("");
                                                                             setUserSearchResults([]);
                                                                         }}
                                                                     >
-                                                                        <X className="h-4 w-4" />
+                                                                        <X className="h-3.5 w-3.5" />
                                                                     </button>
                                                                 )}
                                                             </div>
 
                                                             {userSearchResults.length > 0 && !selectedUser && (
-                                                                <div className="mt-1 bg-black/80 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden absolute z-10 w-[calc(100%-3rem)] max-h-48 overflow-y-auto shadow-lg"
-                                                                    style={{
-                                                                        backdropFilter: 'blur(16px)',
-                                                                        WebkitBackdropFilter: 'blur(16px)',
-                                                                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                                                                    }}>
+                                                                <div className="mt-0.5 bg-paper border-2 border-ink overflow-hidden absolute z-10 w-[calc(100%-3rem)] max-h-48 overflow-y-auto shadow-brutal-red">
                                                                     {userSearchResults.map(user => (
                                                                         <button
                                                                             key={user.id}
-                                                                            className="flex items-center w-full p-2 hover:bg-white/10 text-left text-white text-sm"
+                                                                            className="flex items-center w-full p-2 hover:bg-ink hover:text-paper text-left text-[11px] font-mono border-b border-ink/20 last:border-0"
                                                                             onClick={() => {
                                                                                 setSelectedUser(user);
                                                                                 setSendToUsername(user.username);
                                                                                 setUserSearchResults([]);
                                                                             }}
                                                                         >
-                                                                            <div className="w-8 h-8 rounded-full bg-white/10 mr-2 flex items-center justify-center overflow-hidden">
+                                                                            <div className="w-6 h-6 bg-ink/10 mr-2 flex items-center justify-center overflow-hidden border border-ink/20">
                                                                                 {user.imageUrl ? (
                                                                                     <img src={user.imageUrl} alt={user.username} className="w-full h-full object-cover" />
                                                                                 ) : (
-                                                                                    <span className="text-sm font-medium text-white">
+                                                                                    <span className="text-[10px] font-bold">
                                                                                         {user.username.charAt(0).toUpperCase()}
                                                                                     </span>
                                                                                 )}
@@ -2110,87 +2018,82 @@ export default function WatchLaterPage() {
                                                             )}
 
                                                             {searchingUser && (
-                                                                <div className="mt-2 text-white/60 text-sm flex items-center">
-                                                                    <svg className="animate-spin h-3 w-3 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <div className="mt-1.5 text-[10px] font-mono text-ink/50 flex items-center">
+                                                                    <svg className="animate-spin h-3 w-3 mr-1.5 text-ink" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                                     </svg>
-                                                                    Searching users...
+                                                                    Searching...
                                                                 </div>
                                                             )}
 
                                                             {selectedUser && (
-                                                                <div className="mt-2 flex items-center bg-white/10 rounded-lg p-2">
-                                                                    <div className="w-8 h-8 rounded-full bg-white/10 mr-2 flex items-center justify-center overflow-hidden">
+                                                                <div className="mt-1.5 flex items-center border-1.5 border-ink bg-ink/5 p-1.5">
+                                                                    <div className="w-6 h-6 bg-ink/10 mr-1.5 flex items-center justify-center overflow-hidden border border-ink/20">
                                                                         {selectedUser.imageUrl ? (
                                                                             <img src={selectedUser.imageUrl} alt={selectedUser.username} className="w-full h-full object-cover" />
                                                                         ) : (
-                                                                            <span className="text-sm font-medium text-white">
+                                                                            <span className="text-[10px] font-bold">
                                                                                 {selectedUser.username.charAt(0).toUpperCase()}
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <span className="text-white">{selectedUser.username}</span>
+                                                                    <span className="text-[11px] font-mono font-bold">{selectedUser.username}</span>
                                                                     <button
-                                                                        className="ml-auto text-white/50 hover:text-white p-1"
+                                                                        className="ml-auto text-ink/40 hover:text-ink"
                                                                         onClick={() => {
                                                                             setSelectedUser(null);
                                                                             setSendToUsername("");
                                                                         }}
                                                                     >
-                                                                        <X className="h-4 w-4" />
+                                                                        <X className="h-3.5 w-3.5" />
                                                                     </button>
                                                                 </div>
                                                             )}
                                                         </div>
 
                                                         <div>
-                                                            <label className="block text-sm text-white/70 mb-2">
-                                                                YouTube Video URL
-                                                            </label>
+                                                            <label className="block text-[10px] font-bold mb-1.5">YOUTUBE VIDEO URL</label>
                                                             <div className="relative">
                                                                 <input
                                                                     type="text"
                                                                     value={suggestVideoUrl}
                                                                     onChange={(e) => setSuggestVideoUrl(e.target.value)}
                                                                     placeholder="Paste YouTube video URL"
-                                                                    className="w-full pl-9 pr-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20"
+                                                                    className="w-full border-1.5 border-ink bg-white pl-7 pr-2 py-1.5 text-[12px] font-mono"
                                                                 />
-                                                                <Youtube className="absolute left-3 top-3 h-4 w-4 text-red-400" />
+                                                                <Youtube className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-accent" />
                                                             </div>
-                                                            <p className="text-xs text-white/50 mt-1">Note: Playlists are not supported for suggestions.</p>
+                                                            <p className="text-[9px] font-mono text-ink/40 mt-1">Playlists are not supported for suggestions.</p>
                                                         </div>
 
                                                         <div>
-                                                            <label className="block text-sm text-white/70 mb-2">
-                                                                Add a Note (optional)
-                                                            </label>
+                                                            <label className="block text-[10px] font-bold mb-1.5">NOTE (OPTIONAL)</label>
                                                             <textarea
                                                                 value={suggestNote}
                                                                 onChange={(e) => setSuggestNote(e.target.value)}
                                                                 placeholder="Why are you recommending this video?"
-                                                                className="w-full px-4 py-2.5 bg-black/30 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/20 h-24 resize-none"
+                                                                className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono h-20 resize-none"
                                                             />
                                                         </div>
 
                                                         <button
                                                             onClick={sendVideoSuggestion}
                                                             disabled={!selectedUser || !suggestVideoUrl.trim() || sendingMessage}
-                                                            className={`flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm transition-colors ${(!selectedUser || !suggestVideoUrl.trim() || sendingMessage) ? 'opacity-50 cursor-not-allowed' : ''
-                                                                }`}
+                                                            className="flex items-center justify-center gap-1.5 bg-ink text-paper px-3 py-1.5 text-[10px] font-bold border-2 border-ink shadow-brutal-red disabled:opacity-50 w-full"
                                                         >
                                                             {sendingMessage ? (
                                                                 <>
-                                                                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                    <svg className="animate-spin h-3.5 w-3.5 text-paper" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                                     </svg>
-                                                                    Sending...
+                                                                    SENDING...
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <Send className="h-4 w-4" />
-                                                                    Send Suggestion
+                                                                    <Send className="h-3 w-3" />
+                                                                    ▶ SEND SUGGESTION
                                                                 </>
                                                             )}
                                                         </button>
@@ -2198,27 +2101,23 @@ export default function WatchLaterPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="mb-8">
-                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                                    Inbox
+                                            <div>
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-2 flex items-center">
+                                                    <MessageSquare className="w-3 h-3 mr-1.5" />
+                                                    INBOX
                                                     {unreadSuggestions > 0 && (
-                                                        <span className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                                                            {unreadSuggestions} new
+                                                        <span className="ml-2 bg-accent text-paper text-[8px] px-1 py-0.5 font-bold">
+                                                            {unreadSuggestions} NEW
                                                         </span>
                                                     )}
                                                 </h3>
 
                                                 {inboxSuggestions.length === 0 ? (
-                                                    <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-8 text-center">
-                                                        <div className="flex justify-center mb-4">
-                                                            <MessageSquare className="h-12 w-12 text-white/20" />
-                                                        </div>
-                                                        <p className="text-white/60">Your inbox is empty.</p>
-                                                        <p className="text-white/40 text-sm mt-1">When someone sends you a video suggestion, it will appear here.</p>
+                                                    <div className="border-1.5 border-ink p-6 text-center font-mono text-[10px] text-ink/40">
+                                                        [ EMPTY ] — No suggestions received yet.
                                                     </div>
                                                 ) : (
-                                                    <div className="space-y-4">
+                                                    <div className="space-y-2">
                                                         {inboxSuggestions
                                                             .sort((a, b) => {
                                                                 if (a.read !== b.read) return a.read ? 1 : -1;
@@ -2227,15 +2126,15 @@ export default function WatchLaterPage() {
                                                             .map(suggestion => (
                                                                 <div
                                                                     key={suggestion.id}
-                                                                    className={`bg-black/10 backdrop-blur-md rounded-lg border ${suggestion.read ? 'border-white/10' : 'border-blue-500/30'} overflow-hidden`}
+                                                                    className={`border-1.5 ${suggestion.read ? 'border-ink/30' : 'border-ink'} overflow-hidden bg-white`}
                                                                     onMouseEnter={() => !suggestion.read && markAsRead(suggestion)}
                                                                 >
-                                                                    <div className="p-4 flex flex-col sm:flex-row gap-4">
+                                                                    <div className="p-3 flex flex-col sm:flex-row gap-3">
                                                                         <a
                                                                             href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="w-full sm:w-36 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-black/30"
+                                                                            className="w-full sm:w-28 h-20 flex-shrink-0 overflow-hidden border-1.5 border-ink/30"
                                                                         >
                                                                             <img
                                                                                 src={suggestion.videoThumbnail}
@@ -2245,74 +2144,72 @@ export default function WatchLaterPage() {
                                                                         </a>
 
                                                                         <div className="flex-grow min-w-0">
-                                                                            <div className="flex items-start justify-between gap-4">
+                                                                            <div className="flex items-start justify-between gap-2">
                                                                                 <a
                                                                                     href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
-                                                                                    className="text-white font-medium hover:text-blue-400 transition-colors line-clamp-2"
+                                                                                    className="text-[11px] font-bold hover:text-accent transition-colors line-clamp-2"
                                                                                 >
                                                                                     {suggestion.videoTitle}
                                                                                 </a>
                                                                                 {!suggestion.read && (
-                                                                                    <span className="bg-blue-500 text-white text-xs px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                                                                        New
+                                                                                    <span className="bg-ink text-paper text-[8px] px-1 py-0.5 font-mono flex-shrink-0">
+                                                                                        NEW
                                                                                     </span>
                                                                                 )}
                                                                             </div>
 
-                                                                            <div className="flex items-center text-white/50 text-sm mt-1 gap-2">
+                                                                            <div className="flex items-center text-ink/40 text-[9px] font-mono mt-1 gap-2">
                                                                                 <span className="flex items-center">
-                                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                                    <Clock className="h-2.5 w-2.5 mr-1" />
                                                                                     {suggestion.videoDuration ? formatDuration(suggestion.videoDuration) : "Unknown"}
                                                                                 </span>
-
-                                                                                <span className="text-white/30">•</span>
-
+                                                                                <span>·</span>
                                                                                 <span>
-                                                                                    From: <span className="text-white">{suggestion.fromUser?.username || "Unknown user"}</span>
+                                                                                    From: <span className="font-bold text-ink">{suggestion.fromUser?.username || "Unknown user"}</span>
                                                                                 </span>
                                                                             </div>
 
                                                                             {suggestion.note && (
-                                                                                <div className="mt-2 bg-white/5 rounded p-2 text-sm text-white/80">
+                                                                                <div className="mt-1.5 border-1.5 border-ink/20 bg-ink/5 p-1.5 text-[10px] font-mono text-ink/70">
                                                                                     {suggestion.note}
                                                                                 </div>
                                                                             )}
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="bg-black/20 px-4 py-3 flex justify-between items-center">
-                                                                        <div className="text-xs text-white/50">
+                                                                    <div className="border-t-1.5 border-ink/20 px-3 py-2 flex justify-between items-center bg-ink/5">
+                                                                        <div className="text-[9px] font-mono text-ink/40">
                                                                             {new Date(suggestion.createdAt).toLocaleString()}
                                                                         </div>
 
-                                                                        <div className="flex items-center gap-2">
+                                                                        <div className="flex items-center gap-1.5">
                                                                             {suggestion.accepted === null ? (
                                                                                 <>
                                                                                     <button
                                                                                         onClick={() => declineSuggestion(suggestion)}
-                                                                                        className="flex items-center gap-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-red-400 px-3 py-1.5 rounded-lg text-sm transition-colors border border-white/10"
+                                                                                        className="flex items-center gap-1 border-2 border-ink text-[10px] font-bold px-2 py-1 hover:bg-accent hover:text-paper hover:border-accent transition-colors"
                                                                                     >
-                                                                                        <XCircle className="w-4 h-4" />
-                                                                                        Decline
+                                                                                        <XCircle className="w-3 h-3" />
+                                                                                        DECLINE
                                                                                     </button>
 
                                                                                     <button
                                                                                         onClick={() => acceptSuggestion(suggestion)}
-                                                                                        className="flex items-center gap-1 bg-blue-600/50 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                                                                                        className="flex items-center gap-1 bg-ink text-paper border-2 border-ink text-[10px] font-bold px-2 py-1 shadow-brutal-red hover:bg-ink/80 transition-colors"
                                                                                     >
-                                                                                        <CheckCircle className="w-4 h-4" />
-                                                                                        Accept
+                                                                                        <CheckCircle className="w-3 h-3" />
+                                                                                        ▶ ACCEPT
                                                                                     </button>
                                                                                 </>
                                                                             ) : suggestion.accepted ? (
-                                                                                <span className="text-green-400 text-sm flex items-center gap-1">
-                                                                                    <CheckCircle className="w-4 h-4" /> Accepted
+                                                                                <span className="text-green-700 text-[10px] font-bold font-mono flex items-center gap-1">
+                                                                                    <CheckCircle className="w-3 h-3" /> ACCEPTED
                                                                                 </span>
                                                                             ) : (
-                                                                                <span className="text-red-400 text-sm flex items-center gap-1">
-                                                                                    <XCircle className="w-4 h-4" /> Declined
+                                                                                <span className="text-accent text-[10px] font-bold font-mono flex items-center gap-1">
+                                                                                    <XCircle className="w-3 h-3" /> DECLINED
                                                                                 </span>
                                                                             )}
                                                                         </div>
@@ -2324,30 +2221,30 @@ export default function WatchLaterPage() {
                                             </div>
 
                                             <div>
-                                                <h3 className="text-lg font-medium text-white/80 mb-4 flex items-center">
-                                                    <ArrowLeft className="w-4 h-4 mr-2" />
-                                                    Sent Suggestions
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-2 flex items-center">
+                                                    <ArrowLeft className="w-3 h-3 mr-1.5" />
+                                                    SENT SUGGESTIONS
                                                 </h3>
 
                                                 {outboxSuggestions.length === 0 ? (
-                                                    <div className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 p-8 text-center">
-                                                        <p className="text-white/60">You haven't sent any suggestions yet.</p>
+                                                    <div className="border-1.5 border-ink p-6 text-center font-mono text-[10px] text-ink/40">
+                                                        [ EMPTY ] — No suggestions sent yet.
                                                     </div>
                                                 ) : (
-                                                    <div className="space-y-4">
+                                                    <div className="space-y-2">
                                                         {outboxSuggestions
                                                             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                                             .map(suggestion => (
                                                                 <div
                                                                     key={suggestion.id}
-                                                                    className="bg-black/10 backdrop-blur-md rounded-lg border border-white/10 overflow-hidden"
+                                                                    className="border-1.5 border-ink/30 overflow-hidden bg-white"
                                                                 >
-                                                                    <div className="p-4 flex flex-col sm:flex-row gap-4">
+                                                                    <div className="p-3 flex flex-col sm:flex-row gap-3">
                                                                         <a
                                                                             href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
-                                                                            className="w-full sm:w-36 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-black/30"
+                                                                            className="w-full sm:w-28 h-20 flex-shrink-0 overflow-hidden border-1.5 border-ink/30"
                                                                         >
                                                                             <img
                                                                                 src={suggestion.videoThumbnail}
@@ -2361,53 +2258,50 @@ export default function WatchLaterPage() {
                                                                                 href={`https://www.youtube.com/watch?v=${suggestion.videoId}`}
                                                                                 target="_blank"
                                                                                 rel="noopener noreferrer"
-                                                                                className="text-white font-medium hover:text-blue-400 transition-colors line-clamp-2"
+                                                                                className="text-[11px] font-bold hover:text-accent transition-colors line-clamp-2"
                                                                             >
                                                                                 {suggestion.videoTitle}
                                                                             </a>
 
-                                                                            <div className="flex items-center text-white/50 text-sm mt-1 gap-2">
+                                                                            <div className="flex items-center text-ink/40 text-[9px] font-mono mt-1 gap-2">
                                                                                 <span className="flex items-center">
-                                                                                    <Clock className="h-3 w-3 mr-1" />
+                                                                                    <Clock className="h-2.5 w-2.5 mr-1" />
                                                                                     {suggestion.videoDuration ? formatDuration(suggestion.videoDuration) : "Unknown"}
                                                                                 </span>
-
-                                                                                <span className="text-white/30">•</span>
-
+                                                                                <span>·</span>
                                                                                 <span>
-                                                                                    To: <span className="text-white">{suggestion.toUser?.username || "Unknown user"}</span>
+                                                                                    To: <span className="font-bold text-ink">{suggestion.toUser?.username || "Unknown user"}</span>
                                                                                 </span>
-
                                                                                 {suggestion.read && (
                                                                                     <>
-                                                                                        <span className="text-white/30">•</span>
-                                                                                        <span className="text-white/60">Seen</span>
+                                                                                        <span>·</span>
+                                                                                        <span>SEEN</span>
                                                                                     </>
                                                                                 )}
                                                                             </div>
 
                                                                             {suggestion.note && (
-                                                                                <div className="mt-2 bg-white/5 rounded p-2 text-sm text-white/80">
+                                                                                <div className="mt-1.5 border-1.5 border-ink/20 bg-ink/5 p-1.5 text-[10px] font-mono text-ink/70">
                                                                                     {suggestion.note}
                                                                                 </div>
                                                                             )}
                                                                         </div>
                                                                     </div>
 
-                                                                    <div className="bg-black/20 px-4 py-3 flex justify-between items-center">
-                                                                        <div className="text-xs text-white/50">
+                                                                    <div className="border-t-1.5 border-ink/20 px-3 py-2 flex justify-between items-center bg-ink/5">
+                                                                        <div className="text-[9px] font-mono text-ink/40">
                                                                             {new Date(suggestion.createdAt).toLocaleString()}
                                                                         </div>
 
-                                                                        <div className="flex items-center gap-2">
+                                                                        <div className="flex items-center gap-1.5">
                                                                             {suggestion.accepted !== null && (
                                                                                 suggestion.accepted ? (
-                                                                                    <span className="text-green-400 text-sm flex items-center gap-1">
-                                                                                        <CheckCircle className="w-4 h-4" /> Accepted
+                                                                                    <span className="text-green-700 text-[10px] font-bold font-mono flex items-center gap-1">
+                                                                                        <CheckCircle className="w-3 h-3" /> ACCEPTED
                                                                                     </span>
                                                                                 ) : (
-                                                                                    <span className="text-red-400 text-sm flex items-center gap-1">
-                                                                                        <XCircle className="w-4 h-4" /> Declined
+                                                                                    <span className="text-accent text-[10px] font-bold font-mono flex items-center gap-1">
+                                                                                        <XCircle className="w-3 h-3" /> DECLINED
                                                                                     </span>
                                                                                 )
                                                                             )}
@@ -2424,49 +2318,49 @@ export default function WatchLaterPage() {
 
                                 {activeSettingsTab === "stats" && (
                                     <div className="flex flex-col h-full">
-                                        <div className="bg-black/20 p-6 border-b border-white/10">
-                                            <h2 className="text-xl font-semibold text-white">Statistics</h2>
-                                            <p className="text-white/60 text-sm mt-1">
+                                        <div className="p-4 border-b-2 border-ink">
+                                            <h2 className="text-[11px] font-bold uppercase tracking-wide">Statistics</h2>
+                                            <p className="text-[10px] font-mono text-ink/50 mt-0.5">
                                                 Track your viewing progress and video statistics
                                             </p>
                                         </div>
 
-                                        <div className="p-6 flex-grow overflow-y-auto">
-                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
-                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Total</h3>
-                                                    <p className="text-3xl font-bold text-white mt-2">{statsData.totalCount}</p>
+                                        <div className="p-4 flex-grow overflow-y-auto space-y-3">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                <div className="border-2 border-ink p-3 flex flex-col items-center bg-white">
+                                                    <h3 className="text-[9px] font-bold font-mono uppercase tracking-wide text-ink/50">TOTAL</h3>
+                                                    <p className="text-2xl font-black font-display mt-1">{statsData.totalCount}</p>
                                                 </div>
-                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
-                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">In list</h3>
-                                                    <p className="text-3xl font-bold text-blue-400 mt-2">{statsData.watchLaterCount}</p>
+                                                <div className="border-2 border-ink p-3 flex flex-col items-center bg-white">
+                                                    <h3 className="text-[9px] font-bold font-mono uppercase tracking-wide text-ink/50">IN LIST</h3>
+                                                    <p className="text-2xl font-black font-display mt-1">{statsData.watchLaterCount}</p>
                                                 </div>
-                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
-                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Watching</h3>
-                                                    <p className="text-3xl font-bold text-purple-400 mt-2">{statsData.watchingCount}</p>
+                                                <div className="border-2 border-accent p-3 flex flex-col items-center bg-white">
+                                                    <h3 className="text-[9px] font-bold font-mono uppercase tracking-wide text-accent">WATCHING</h3>
+                                                    <p className="text-2xl font-black font-display mt-1 text-accent">{statsData.watchingCount}</p>
                                                 </div>
-                                                <div className="bg-black/30 backdrop-blur-xl rounded-lg p-4 border border-white/10 flex flex-col items-center">
-                                                    <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Watched</h3>
-                                                    <p className="text-3xl font-bold text-green-400 mt-2">{statsData.watchedCount}</p>
+                                                <div className="border-2 border-green-600 p-3 flex flex-col items-center bg-white">
+                                                    <h3 className="text-[9px] font-bold font-mono uppercase tracking-wide text-green-700">WATCHED</h3>
+                                                    <p className="text-2xl font-black font-display mt-1 text-green-700">{statsData.watchedCount}</p>
                                                 </div>
                                             </div>
 
-                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
-                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                                    <Clock className="w-4 h-4 mr-2" />
+                                            <div className="border-2 border-ink p-4">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-3 flex items-center">
+                                                    <Clock className="w-3 h-3 mr-1.5" />
                                                     Watch Time Statistics
                                                 </h3>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
-                                                        <h4 className="text-white/60 text-sm">Total Watch Time</h4>
-                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                    <div className="border-1.5 border-ink/30 p-3 text-center bg-white">
+                                                        <h4 className="text-[9px] font-mono text-ink/50 uppercase">Total Watch Time</h4>
+                                                        <p className="text-lg font-black font-display mt-1">
                                                             {formatTotalTime(statsData.watchedCount ? columns.WATCHED.videos.reduce((total, video) => total + (video.durationSeconds || 0), 0) : 0)}
                                                         </p>
                                                     </div>
-                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
-                                                        <h4 className="text-white/60 text-sm">Average Video Length</h4>
-                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                    <div className="border-1.5 border-ink/30 p-3 text-center bg-white">
+                                                        <h4 className="text-[9px] font-mono text-ink/50 uppercase">Avg Video Length</h4>
+                                                        <p className="text-lg font-black font-display mt-1">
                                                             {formatDuration(statsData.totalCount ?
                                                                 Math.round(
                                                                     [...columns.WATCH_LATER.videos,
@@ -2479,23 +2373,23 @@ export default function WatchLaterPage() {
                                                             )}
                                                         </p>
                                                     </div>
-                                                    <div className="bg-white/5 rounded-lg p-4 text-center">
-                                                        <h4 className="text-white/60 text-sm">Completion Rate</h4>
-                                                        <p className="text-2xl font-bold text-white mt-2">
+                                                    <div className="border-1.5 border-ink/30 p-3 text-center bg-white">
+                                                        <h4 className="text-[9px] font-mono text-ink/50 uppercase">Completion Rate</h4>
+                                                        <p className="text-lg font-black font-display mt-1">
                                                             {statsData.totalCount ? Math.round((statsData.watchedCount / statsData.totalCount) * 100) : 0}%
                                                         </p>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
-                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                                    <PieChart className="w-4 h-4 mr-2" />
+                                            <div className="border-2 border-ink p-4">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-3 flex items-center">
+                                                    <PieChart className="w-3 h-3 mr-1.5" />
                                                     Video Distribution
                                                 </h3>
 
-                                                <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-                                                    <div className="h-64 w-full md:w-64">
+                                                <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+                                                    <div className="h-56 w-full md:w-56">
                                                         {statsData.totalCount > 0 ? (
                                                             <Pie
                                                                 data={{
@@ -2504,16 +2398,16 @@ export default function WatchLaterPage() {
                                                                         {
                                                                             data: [statsData.watchLaterCount, statsData.watchingCount, statsData.watchedCount],
                                                                             backgroundColor: [
-                                                                                'rgba(59, 130, 246, 0.6)', // Blue
-                                                                                'rgba(139, 92, 246, 0.6)',  // Purple
-                                                                                'rgba(16, 185, 129, 0.6)'   // Green
+                                                                                'rgba(10, 10, 10, 0.7)',
+                                                                                'rgba(220, 38, 38, 0.7)',
+                                                                                'rgba(22, 101, 52, 0.7)'
                                                                             ],
                                                                             borderColor: [
-                                                                                'rgba(59, 130, 246, 1)',
-                                                                                'rgba(139, 92, 246, 1)',
-                                                                                'rgba(16, 185, 129, 1)'
+                                                                                'rgba(10, 10, 10, 1)',
+                                                                                'rgba(220, 38, 38, 1)',
+                                                                                'rgba(22, 101, 52, 1)'
                                                                             ],
-                                                                            borderWidth: 1,
+                                                                            borderWidth: 2,
                                                                         },
                                                                     ],
                                                                 }}
@@ -2523,7 +2417,8 @@ export default function WatchLaterPage() {
                                                                         legend: {
                                                                             position: 'bottom',
                                                                             labels: {
-                                                                                color: 'rgba(255, 255, 255, 0.7)'
+                                                                                color: 'rgba(10, 10, 10, 0.7)',
+                                                                                font: { size: 10, weight: 'bold' }
                                                                             }
                                                                         },
                                                                         tooltip: {
@@ -2542,127 +2437,125 @@ export default function WatchLaterPage() {
                                                                 }}
                                                             />
                                                         ) : (
-                                                            <div className="h-full w-full flex items-center justify-center text-white/40">
-                                                                No data to display
+                                                            <div className="h-full w-full flex items-center justify-center font-mono text-[10px] text-ink/40">
+                                                                [ NO DATA ]
                                                             </div>
                                                         )}
                                                     </div>
 
-                                                    <div className="md:flex-1">
-                                                        <div className="space-y-3">
-                                                            <div>
-                                                                <div className="flex justify-between items-center mb-1">
-                                                                    <span className="text-sm text-white/70 flex items-center">
-                                                                        <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                                                                        Watch Later
-                                                                    </span>
-                                                                    <span className="text-sm font-medium text-white">
-                                                                        {statsData.totalCount > 0
-                                                                            ? Math.round((statsData.watchLaterCount / statsData.totalCount) * 100)
-                                                                            : 0}%
-                                                                    </span>
-                                                                </div>
-                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-blue-500 rounded-full"
-                                                                        style={{
-                                                                            width: `${statsData.totalCount > 0
-                                                                                ? (statsData.watchLaterCount / statsData.totalCount) * 100
-                                                                                : 0}%`
-                                                                        }}
-                                                                    ></div>
-                                                                </div>
+                                                    <div className="md:flex-1 w-full space-y-2">
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-[10px] font-bold font-mono flex items-center">
+                                                                    <span className="inline-block w-3 h-3 bg-ink mr-1.5"></span>
+                                                                    WATCH LATER
+                                                                </span>
+                                                                <span className="text-[10px] font-bold font-mono">
+                                                                    {statsData.totalCount > 0
+                                                                        ? Math.round((statsData.watchLaterCount / statsData.totalCount) * 100)
+                                                                        : 0}%
+                                                                </span>
                                                             </div>
-
-                                                            <div>
-                                                                <div className="flex justify-between items-center mb-1">
-                                                                    <span className="text-sm text-white/70 flex items-center">
-                                                                        <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                                                                        Watching
-                                                                    </span>
-                                                                    <span className="text-sm font-medium text-white">
-                                                                        {statsData.totalCount > 0
-                                                                            ? Math.round((statsData.watchingCount / statsData.totalCount) * 100)
-                                                                            : 0}%
-                                                                    </span>
-                                                                </div>
-                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-purple-500 rounded-full"
-                                                                        style={{
-                                                                            width: `${statsData.totalCount > 0
-                                                                                ? (statsData.watchingCount / statsData.totalCount) * 100
-                                                                                : 0}%`
-                                                                        }}
-                                                                    ></div>
-                                                                </div>
+                                                            <div className="h-2 bg-ink/10 border border-ink/20 overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-ink"
+                                                                    style={{
+                                                                        width: `${statsData.totalCount > 0
+                                                                            ? (statsData.watchLaterCount / statsData.totalCount) * 100
+                                                                            : 0}%`
+                                                                    }}
+                                                                ></div>
                                                             </div>
+                                                        </div>
 
-                                                            <div>
-                                                                <div className="flex justify-between items-center mb-1">
-                                                                    <span className="text-sm text-white/70 flex items-center">
-                                                                        <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                                                                        Watched
-                                                                    </span>
-                                                                    <span className="text-sm font-medium text-white">
-                                                                        {statsData.totalCount > 0
-                                                                            ? Math.round((statsData.watchedCount / statsData.totalCount) * 100)
-                                                                            : 0}%
-                                                                    </span>
-                                                                </div>
-                                                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                                                    <div
-                                                                        className="h-full bg-green-500 rounded-full"
-                                                                        style={{
-                                                                            width: `${statsData.totalCount > 0
-                                                                                ? (statsData.watchedCount / statsData.totalCount) * 100
-                                                                                : 0}%`
-                                                                        }}
-                                                                    ></div>
-                                                                </div>
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-[10px] font-bold font-mono flex items-center">
+                                                                    <span className="inline-block w-3 h-3 bg-accent mr-1.5"></span>
+                                                                    WATCHING
+                                                                </span>
+                                                                <span className="text-[10px] font-bold font-mono">
+                                                                    {statsData.totalCount > 0
+                                                                        ? Math.round((statsData.watchingCount / statsData.totalCount) * 100)
+                                                                        : 0}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="h-2 bg-accent/10 border border-accent/20 overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-accent"
+                                                                    style={{
+                                                                        width: `${statsData.totalCount > 0
+                                                                            ? (statsData.watchingCount / statsData.totalCount) * 100
+                                                                            : 0}%`
+                                                                    }}
+                                                                ></div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-1">
+                                                                <span className="text-[10px] font-bold font-mono flex items-center">
+                                                                    <span className="inline-block w-3 h-3 bg-green-600 mr-1.5"></span>
+                                                                    WATCHED
+                                                                </span>
+                                                                <span className="text-[10px] font-bold font-mono">
+                                                                    {statsData.totalCount > 0
+                                                                        ? Math.round((statsData.watchedCount / statsData.totalCount) * 100)
+                                                                        : 0}%
+                                                                </span>
+                                                            </div>
+                                                            <div className="h-2 bg-green-600/10 border border-green-600/20 overflow-hidden">
+                                                                <div
+                                                                    className="h-full bg-green-600"
+                                                                    style={{
+                                                                        width: `${statsData.totalCount > 0
+                                                                            ? (statsData.watchedCount / statsData.totalCount) * 100
+                                                                            : 0}%`
+                                                                    }}
+                                                                ></div>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="mb-3 bg-black/20 backdrop-blur-xl rounded-lg p-6 border border-white/10">
-                                                <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-                                                    <TrendingUp className="w-4 h-4 mr-2" />
+                                            <div className="border-2 border-ink p-4">
+                                                <h3 className="text-[10px] font-bold uppercase tracking-wide mb-3 flex items-center">
+                                                    <TrendingUp className="w-3 h-3 mr-1.5" />
                                                     Watched Videos Progress
                                                 </h3>
 
-                                                <div className="mb-4 flex gap-2">
+                                                <div className="mb-3 flex gap-1">
                                                     <button
                                                         onClick={() => setProgressStartDate('last7days')}
-                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'last7days'
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                        className={`px-2 py-1 text-[9px] font-bold font-mono border transition-colors ${progressStartDate === 'last7days'
+                                                            ? 'bg-ink text-paper border-ink'
+                                                            : 'border-ink/30 text-ink/50 hover:border-ink hover:text-ink'
                                                             }`}
                                                     >
-                                                        Last 7 days
+                                                        7D
                                                     </button>
                                                     <button
                                                         onClick={() => setProgressStartDate('last30days')}
-                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'last30days'
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                        className={`px-2 py-1 text-[9px] font-bold font-mono border transition-colors ${progressStartDate === 'last30days'
+                                                            ? 'bg-ink text-paper border-ink'
+                                                            : 'border-ink/30 text-ink/50 hover:border-ink hover:text-ink'
                                                             }`}
                                                     >
-                                                        Last 30 days
+                                                        30D
                                                     </button>
                                                     <button
                                                         onClick={() => setProgressStartDate('allTime')}
-                                                        className={`px-3 py-1.5 rounded-md text-sm ${progressStartDate === 'allTime'
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-transparent text-white/50 hover:text-white'
+                                                        className={`px-2 py-1 text-[9px] font-bold font-mono border transition-colors ${progressStartDate === 'allTime'
+                                                            ? 'bg-ink text-paper border-ink'
+                                                            : 'border-ink/30 text-ink/50 hover:border-ink hover:text-ink'
                                                             }`}
                                                     >
-                                                        All time
+                                                        ALL
                                                     </button>
                                                 </div>
 
-                                                <div className="relative h-64">
+                                                <div className="relative h-56">
                                                     {progressData.length > 0 ? (
                                                         <Line
                                                             data={{
@@ -2671,10 +2564,11 @@ export default function WatchLaterPage() {
                                                                     {
                                                                         label: 'Watched Videos',
                                                                         data: progressData.map(item => item.count),
-                                                                        borderColor: 'rgba(16, 185, 129, 1)',
-                                                                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                                        borderColor: 'rgba(10, 10, 10, 1)',
+                                                                        backgroundColor: 'rgba(10, 10, 10, 0.1)',
                                                                         fill: true,
-                                                                        tension: 0.4,
+                                                                        tension: 0.2,
+                                                                        borderWidth: 2,
                                                                     }
                                                                 ]
                                                             }}
@@ -2699,20 +2593,22 @@ export default function WatchLaterPage() {
                                                                             }
                                                                         },
                                                                         grid: {
-                                                                            color: 'rgba(255, 255, 255, 0.05)'
+                                                                            color: 'rgba(10, 10, 10, 0.05)'
                                                                         },
                                                                         ticks: {
-                                                                            color: 'rgba(255, 255, 255, 0.5)'
+                                                                            color: 'rgba(10, 10, 10, 0.5)',
+                                                                            font: { size: 9 }
                                                                         }
                                                                     },
                                                                     y: {
                                                                         beginAtZero: true,
                                                                         grid: {
-                                                                            color: 'rgba(255, 255, 255, 0.05)'
+                                                                            color: 'rgba(10, 10, 10, 0.05)'
                                                                         },
                                                                         ticks: {
                                                                             precision: 0,
-                                                                            color: 'rgba(255, 255, 255, 0.5)'
+                                                                            color: 'rgba(10, 10, 10, 0.5)',
+                                                                            font: { size: 9 }
                                                                         }
                                                                     }
                                                                 },
@@ -2739,8 +2635,8 @@ export default function WatchLaterPage() {
                                                             }}
                                                         />
                                                     ) : (
-                                                        <div className="h-full w-full flex items-center justify-center text-white/40">
-                                                            No progress data available
+                                                        <div className="h-full w-full flex items-center justify-center font-mono text-[10px] text-ink/40">
+                                                            [ NO PROGRESS DATA ]
                                                         </div>
                                                     )}
                                                 </div>
