@@ -44,6 +44,7 @@ export class CardController {
         @Query('maxDuration') maxDuration: string,
         @Query('fromDate') fromDate: string,
         @Query('toDate') toDate: string,
+        @Query('listId') listId: string,
         @Request() req
     ) {
         if (userId !== req.user.userId) {
@@ -51,6 +52,10 @@ export class CardController {
         }
 
         const filter: any = { userId };
+
+        if (listId) {
+            filter.listId = listId;
+        }
 
         if (search) {
             filter.title = {

@@ -1,14 +1,24 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ColumnType, Prisma } from '@watchlater/db';
-import { PlaylistService } from 'src/playlist/playlist.service';
 
 @Injectable()
 export class CardService {
-    constructor(private prisma: PrismaService, private playlistService : PlaylistService) { }
+    constructor(private prisma: PrismaService) { }
 
     async create(data: any) {
         try {
+            let listId = data.listId;
+            if (!listId) {
+                const defaultList = await this.prisma.list.findFirst({
+                    where: { userId: data.userId, isDefault: true },
+                });
+                if (!defaultList) {
+                    throw new Error('Default list missing for user — data is inconsistent');
+                }
+                listId = defaultList.id;
+            }
+
             const existingCard = await this.prisma.card.findFirst({
                 where: {
                     videoId: data.videoId,
@@ -17,13 +27,6 @@ export class CardService {
             });
 
             if (existingCard) {
-                if (data.playlistId && !existingCard.playlistId) {
-                    return await this.prisma.card.update({
-                        where: { id: existingCard.id },
-                        data: { playlistId: data.playlistId }
-                    });
-                }
-
                 return {
                     statusCode: 409,
                     message: "Video already exists in your collection",
@@ -34,12 +37,9 @@ export class CardService {
             const response = await this.prisma.card.create({
                 data: {
                     ...data,
+                    listId,
                 },
             });
-
-            if (data.playlistId) {
-                this.playlistService.calculatePlaylistDuration(data.playlistId, data.userId);
-            }
 
             return response;
         } catch (error) {
