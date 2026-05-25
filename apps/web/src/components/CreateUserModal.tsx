@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { X, Upload, User } from "lucide-react";
 import { toast } from "sonner";
 
 interface CreateUserModalProps {
@@ -69,79 +68,78 @@ export default function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUs
     };
 
     return (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-white/10 rounded-xl w-full max-w-md p-6 shadow-xl">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">Create New Collection</h2>
-                    <button onClick={onClose} className="text-white/60 hover:text-white">
-                        <X className="w-5 h-5" />
-                    </button>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-paper border-2 border-ink shadow-brutal-red w-full max-w-md">
+                <div className="border-b-2 border-ink p-2 px-3 flex justify-between text-[11px] font-bold">
+                    <span>▶ NEW_COLLECTION</span>
+                    <button onClick={onClose}>[x]</button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-white/70 mb-1">
-                            Username
-                        </label>
+                <form onSubmit={handleSubmit} className="p-4">
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold mb-2">USERNAME</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                             placeholder="Enter a username"
                             disabled={isLoading}
                         />
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-white/70 mb-1">
-                            Password
-                        </label>
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold mb-2">PASSWORD</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                             placeholder="Create a password"
                             disabled={isLoading}
                         />
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-white/70 mb-1">
-                            Confirm Password
-                        </label>
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold mb-2">CONFIRM PASSWORD</label>
                         <input
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                             placeholder="Confirm password"
                             disabled={isLoading}
                         />
                     </div>
 
-                    <div className="mb-8">
-                        <label className="block text-sm font-medium text-white/70 mb-1">
-                            Profile Image URL (optional)
-                        </label>
+                    <div className="mb-4">
+                        <label className="block text-[10px] font-bold mb-2">PROFILE IMAGE URL (OPTIONAL)</label>
                         <input
                             type="text"
                             value={imageUrl}
                             onChange={(e) => setImageUrl(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full border-1.5 border-ink bg-white px-2 py-1.5 text-[12px] font-mono"
                             placeholder="https://example.com/image.jpg"
                             disabled={isLoading}
                         />
                     </div>
 
-                    <button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? "Creating..." : "Create Collection"}
-                    </button>
+                    <div className="flex gap-1.5 mt-3">
+                        <button
+                            type="submit"
+                            className="flex-1 bg-ink text-paper px-4 py-2 text-[11px] font-bold border-2 border-ink shadow-brutal-red disabled:opacity-50"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "CREATING..." : "▶ CREATE"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="border-2 border-ink px-3 py-2 text-[11px] font-bold"
+                        >
+                            CANCEL
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

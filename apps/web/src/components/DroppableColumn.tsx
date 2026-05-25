@@ -10,7 +10,7 @@ export function DroppableColumn({ id, children, className = "" }: { id: string; 
         }
     });
 
-    const isOverClass = isOver ? "bg-white/15" : "";
+    const isOverClass = isOver ? "bg-ink/5" : "";
 
     return (
         <div

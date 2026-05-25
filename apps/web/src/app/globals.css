@@ -1,5 +1,15 @@
 @import 'tailwindcss';
 
+@theme {
+    --color-paper: #f5f1e8;
+    --color-ink: #0a0a0a;
+    --color-accent: #dc2626;
+    --shadow-brutal: 3px 3px 0 #0a0a0a;
+    --shadow-brutal-red: 3px 3px 0 #dc2626;
+    --font-display: var(--font-display), Inter, sans-serif;
+    --font-mono: var(--font-mono), 'JetBrains Mono', monospace;
+}
+
 @layer base {
     body {
         @apply bg-paper text-ink font-mono;

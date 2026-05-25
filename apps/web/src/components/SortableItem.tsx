@@ -73,14 +73,16 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
     position: isDragging ? 'relative' : 'static' as any,
   };
 
+  const isWatching = status === 'WATCHING';
+  const isWatched = status === 'WATCHED';
+
+  const cardBorder = isWatching ? 'border-accent' : 'border-ink';
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`mb-4 rounded-lg overflow-hidden shadow-md cursor-pointer backdrop-blur-md group ${isPlaylist
-          ? "bg-purple-500/20 border-2 border-purple-500/40"
-          : "bg-white/10 border border-white/20"
-        } hover:bg-white/15 transition-all duration-300`}
+      className={`mb-1.5 bg-white border-1.5 ${cardBorder} p-2 cursor-pointer group ${isWatched ? 'opacity-55' : ''} ${isPlaylist ? 'border-dashed' : ''}`}
       {...(disabled ? {} : attributes)}
       {...(disabled ? {} : listeners)}
     >
@@ -89,39 +91,38 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
           <img
             src={video.thumbnailUrl}
             alt={video.title}
-            className="w-full h-32 object-cover"
+            className={`w-full h-32 object-cover border-1.5 ${cardBorder}`}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
 
           <div
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-ink/30"
             onClick={(e) => {
               e.stopPropagation();
               onOpen();
             }}
           >
-            <div className="w-12 h-12 rounded-full bg-white/30 backdrop-blur-sm flex items-center justify-center cursor-pointer hover:bg-white/40 transition-all">
-              <div className="w-0 h-0 border-t-8 border-t-transparent border-l-12 border-l-white border-b-8 border-b-transparent ml-1"></div>
+            <div className="w-10 h-10 bg-paper border-2 border-ink flex items-center justify-center cursor-pointer">
+              <div className="w-0 h-0 border-t-6 border-t-transparent border-l-10 border-l-ink border-b-6 border-b-transparent ml-1"></div>
             </div>
           </div>
         </div>
 
         {isPlaylist && (
-          <div className="absolute top-2 left-2 bg-purple-500/90 text-white rounded-md px-1.5 py-0.5 text-xs font-medium flex items-center">
+          <div className="absolute top-1 left-1 bg-ink text-paper px-1.5 py-0.5 text-[9px] font-bold font-mono flex items-center">
             <ListVideo className="w-3 h-3 mr-1" />
-            Playlist • {video._count?.cards || 0} videos
+            PLAYLIST · {video._count?.cards || 0}
           </div>
         )}
 
         {video.durationSeconds && video.durationSeconds > 0 && (
-          <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-xs text-white px-2 py-1 rounded flex items-center">
-            <Clock size={10} className="mr-1" />
+          <div className="absolute bottom-1 left-1 bg-ink text-paper text-[9px] font-mono px-1.5 py-0.5 flex items-center">
+            <Clock size={8} className="mr-1" />
             {formatDuration(video.durationSeconds)}
           </div>
         )}
 
         {video.addedAt && (
-          <div className="absolute bottom-2 right-2 bg-black/40 backdrop-blur-sm text-xs text-white/80 px-2 py-1 rounded">
+          <div className="absolute bottom-1 right-1 bg-ink text-paper text-[9px] font-mono px-1.5 py-0.5">
             {formatDate(video.addedAt)}
           </div>
         )}
@@ -131,35 +132,38 @@ export function SortableItem({ id, video, status, onOpen, onRemove, isPlaylist, 
             e.stopPropagation();
             onRemove();
           }}
-          className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm p-1.5 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500/70 transition-all"
+          className="absolute top-1 right-1 bg-accent p-1 opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <Trash2 size={14} className="text-white" />
+          <Trash2 size={12} className="text-paper" />
         </button>
       </div>
 
-      <div className="p-3">
+      <div className="pt-1.5">
         <div className="flex justify-between">
-          <h3 className="font-medium text-white text-sm line-clamp-2 flex-1" onClick={onOpen}>
+          <h3
+            className={`text-[10px] font-bold line-clamp-2 flex-1 ${isWatched ? 'line-through' : ''}`}
+            onClick={onOpen}
+          >
             {video.title}
           </h3>
-          <div className="ml-2 flex-shrink-0">
+          <div className="ml-1 flex-shrink-0">
             <a
               href={video.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors"
+              className="text-ink/60 hover:text-accent p-0.5 transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
-              <ExternalLink className="h-4 w-4" />
+              <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </div>
       </div>
 
       {disabled && isPlaylist && (
-        <div className="absolute top-0 left-0 w-full h-full bg-black/10 backdrop-blur-[1px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={onOpen}>
-          <div className="bg-black/50 px-2 py-1 rounded text-xs text-white">
-            Open to manage videos
+        <div className="absolute top-0 left-0 w-full h-full bg-ink/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" onClick={onOpen}>
+          <div className="bg-ink px-2 py-1 text-[9px] font-mono text-paper">
+            OPEN TO MANAGE
           </div>
         </div>
       )}
