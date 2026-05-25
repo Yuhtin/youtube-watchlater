@@ -11,6 +11,7 @@
     "push": "prisma db push",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
+    "migrate:status": "prisma migrate status",
     "studio": "prisma studio",
     "postinstall": "prisma generate"
   },
