@@ -19,4 +19,20 @@ export class ListService {
             },
         });
     }
+
+    async create(userId: string, dto: { name: string }) {
+        const name = dto.name?.trim();
+        if (!name) {
+            throw new BadRequestException('List name is required');
+        }
+
+        const { _max } = await this.prisma.list.aggregate({
+            where: { userId },
+            _max: { order: true },
+        });
+
+        return this.prisma.list.create({
+            data: { name, userId, order: (_max.order ?? -1) + 1 },
+        });
+    }
 }

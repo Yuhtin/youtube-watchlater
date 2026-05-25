@@ -45,4 +45,24 @@ describe('ListService', () => {
             expect(result).toHaveLength(2);
         });
     });
+
+    describe('create', () => {
+        it('creates a list with order = max(existing) + 1', async () => {
+            prisma.list.aggregate.mockResolvedValue({ _max: { order: 3 } });
+            prisma.list.create.mockResolvedValue({
+                id: 'new', name: 'chill', userId: 'u1', order: 4, isDefault: false,
+            });
+
+            const result = await service.create('u1', { name: 'chill' });
+
+            expect(prisma.list.create).toHaveBeenCalledWith({
+                data: { name: 'chill', userId: 'u1', order: 4 },
+            });
+            expect(result.name).toBe('chill');
+        });
+
+        it('rejects empty names', async () => {
+            await expect(service.create('u1', { name: '' })).rejects.toThrow();
+        });
+    });
 });
