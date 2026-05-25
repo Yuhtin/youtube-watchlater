@@ -65,4 +65,28 @@ describe('ListService', () => {
             await expect(service.create('u1', { name: '' })).rejects.toThrow();
         });
     });
+
+    describe('update', () => {
+        it('renames a list when owner matches', async () => {
+            prisma.list.findFirst.mockResolvedValue({ id: 'l1', userId: 'u1', isDefault: false });
+            prisma.list.update.mockResolvedValue({ id: 'l1', name: 'renamed', userId: 'u1' });
+
+            await service.update('u1', 'l1', { name: 'renamed' });
+
+            expect(prisma.list.update).toHaveBeenCalledWith({
+                where: { id: 'l1' },
+                data: { name: 'renamed' },
+            });
+        });
+
+        it('refuses to rename the default list', async () => {
+            prisma.list.findFirst.mockResolvedValue({ id: 'l1', userId: 'u1', isDefault: true });
+            await expect(service.update('u1', 'l1', { name: 'x' })).rejects.toThrow(/default/i);
+        });
+
+        it('throws NotFound when the list isn\'t owned by the user', async () => {
+            prisma.list.findFirst.mockResolvedValue(null);
+            await expect(service.update('u1', 'l1', { name: 'x' })).rejects.toThrow();
+        });
+    });
 });

@@ -35,4 +35,25 @@ export class ListService {
             data: { name, userId, order: (_max.order ?? -1) + 1 },
         });
     }
+
+    async update(userId: string, listId: string, dto: { name?: string; order?: number }) {
+        const list = await this.prisma.list.findFirst({
+            where: { id: listId, userId },
+        });
+        if (!list) throw new NotFoundException('List not found');
+
+        if (dto.name !== undefined) {
+            const name = dto.name.trim();
+            if (!name) throw new BadRequestException('Name cannot be empty');
+            if (list.isDefault) throw new ForbiddenException('Cannot rename the default list');
+        }
+
+        return this.prisma.list.update({
+            where: { id: listId },
+            data: {
+                ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+                ...(dto.order !== undefined ? { order: dto.order } : {}),
+            },
+        });
+    }
 }
