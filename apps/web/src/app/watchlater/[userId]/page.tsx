@@ -355,6 +355,7 @@ export default function WatchLaterPage() {
                 status: "WATCH_LATER",
                 userId: userId,
                 durationSeconds: durationSeconds || null,
+                listId: activeListId ?? undefined,
             };
 
             const response = await apiRequest('/cards', {
@@ -1059,6 +1060,7 @@ export default function WatchLaterPage() {
                     status,
                     userId,
                     durationSeconds,
+                    listId: activeListId ?? undefined,
                 };
     
                 const response = await apiRequest('/cards', {
@@ -1620,6 +1622,7 @@ export default function WatchLaterPage() {
                                                 status: "WATCH_LATER",
                                                 userId: userId,
                                                 durationSeconds: durationSeconds || null,
+                                                listId: activeListId ?? undefined,
                                             };
 
                                             return apiRequest('/cards', {
