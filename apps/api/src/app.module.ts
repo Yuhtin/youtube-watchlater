@@ -8,6 +8,7 @@ import { SuggestionModule } from './suggestion/suggestion.module';
 import { ListModule } from './list/list.module';
 import { YoutubeModule } from './youtube/youtube.module';
 import { CronModule } from './cron/cron.module';
+import { SmartPickModule } from './smart-pick/smart-pick.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CronModule } from './cron/cron.module';
     ListModule,
     YoutubeModule,
     CronModule,
+    SmartPickModule,
   ],
 })
 export class AppModule { }
