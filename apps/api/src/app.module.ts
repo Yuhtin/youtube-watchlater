@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { PlaylistModule } from './playlist/playlist.module';
 import { SuggestionModule } from './suggestion/suggestion.module';
+import { ListModule } from './list/list.module';
 import { YoutubeModule } from './youtube/youtube.module';
 import { CronModule } from './cron/cron.module';
 
@@ -18,6 +19,7 @@ import { CronModule } from './cron/cron.module';
     AuthModule,
     PlaylistModule,
     SuggestionModule,
+    ListModule,
     YoutubeModule,
     CronModule,
   ],
