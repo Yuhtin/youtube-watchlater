@@ -30,10 +30,16 @@ INSERT INTO "lists" ("id", "name", "userId", "isDefault", "createdAt", "updatedA
 SELECT gen_random_uuid()::text, 'default', "id", true, NOW(), NOW()
 FROM "User";
 
--- 4. Convert existing playlists into Lists
+-- 4. Convert existing playlists into Lists.
+--    The unique (userId, name) index can collide here in two ways:
+--    (a) two playlists with the same title for one user,
+--    (b) a playlist named "default" colliding with the auto-created default.
+--    In either case ON CONFLICT DO NOTHING skips the row; its cards then
+--    fall back to the user's default list via step 5b.
 INSERT INTO "lists" ("id", "name", "userId", "youtubePlaylistId", "thumbnailUrl", "createdAt", "updatedAt")
 SELECT gen_random_uuid()::text, "title", "userId", "playlistId", "thumbnailUrl", "createdAt", "updatedAt"
-FROM "playlists";
+FROM "playlists"
+ON CONFLICT ("userId", "name") DO NOTHING;
 
 -- 5. Backfill cards.listId
 --    Cards with a playlistId → matching new List by (userId, youtubePlaylistId=playlists.playlistId)
