@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: watchlater
+      POSTGRES_PASSWORD: watchlater_dev
+      POSTGRES_DB: watchlater
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U watchlater"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://watchlater:watchlater_dev@db:5432/watchlater?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:?YOUTUBE_API_KEY is required}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:7777}
+      PORT: 4000
+      PLAYLIST_RESYNC_ENABLED: ${PLAYLIST_RESYNC_ENABLED:-true}
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      PORT: 7777
+    ports:
+      - "7777:7777"
+
+volumes:
+  db_data:
