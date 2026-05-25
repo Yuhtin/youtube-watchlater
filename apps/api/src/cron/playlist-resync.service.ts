@@ -15,60 +15,46 @@ export class PlaylistResyncService {
 
     @Cron(CronExpression.EVERY_6_HOURS)
     async resyncAll() {
-        const enabled = process.env.PLAYLIST_RESYNC_ENABLED !== 'false';
-        if (!enabled) return;
+        if (process.env.PLAYLIST_RESYNC_ENABLED === 'false') return;
 
-        this.logger.log('Starting playlist re-sync sweep');
-        const playlists = await this.prisma.playlist.findMany({
-            select: { id: true, playlistId: true, userId: true, title: true },
+        const lists = await this.prisma.list.findMany({
+            where: { youtubePlaylistId: { not: null } },
+            select: { id: true, youtubePlaylistId: true, userId: true, name: true },
         });
 
-        let updated = 0;
-        let removed = 0;
-        let failed = 0;
-
-        for (const playlist of playlists) {
+        for (const list of lists) {
             try {
-                const result = await this.resyncOne(playlist.id, playlist.playlistId, playlist.userId);
-                updated += result.updatedCards;
-                removed += result.removedCards;
+                await this.resyncOne(list.id, list.youtubePlaylistId!, list.userId);
             } catch (err) {
-                failed++;
                 if (err instanceof YouTubeApiError && err.status === 404) {
-                    this.logger.warn(`Playlist ${playlist.playlistId} (${playlist.title}) was deleted on YouTube — skipping`);
+                    this.logger.warn(`Playlist ${list.youtubePlaylistId} (list ${list.name}) was deleted on YouTube — skipping`);
                 } else {
-                    this.logger.error(`Failed to resync playlist ${playlist.playlistId}: ${err instanceof Error ? err.message : String(err)}`);
+                    this.logger.error(`Failed to resync list ${list.id}: ${err instanceof Error ? err.message : String(err)}`);
                 }
             }
         }
-
-        this.logger.log(`Re-sync done: ${playlists.length} playlists scanned, ${updated} cards updated, ${removed} removed, ${failed} failed`);
     }
 
-    private async resyncOne(playlistRowId: string, playlistId: string, userId: string): Promise<{ updatedCards: number; removedCards: number }> {
-        const remoteItems = await this.youtube.getPlaylistItems(playlistId);
+    private async resyncOne(listId: string, youtubePlaylistId: string, userId: string) {
+        const remoteItems = await this.youtube.getPlaylistItems(youtubePlaylistId);
         const remoteIds = new Set(remoteItems.map((v) => v.videoId));
 
         const localCards = await this.prisma.card.findMany({
-            where: { playlistId: playlistRowId, userId },
-            select: { id: true, videoId: true, title: true, durationSeconds: true, thumbnailUrl: true },
+            where: { listId, userId },
+            select: { id: true, videoId: true, title: true, durationSeconds: true, thumbnailUrl: true, channelId: true },
         });
-
-        let updatedCards = 0;
-        let removedCards = 0;
 
         for (const card of localCards) {
             if (!remoteIds.has(card.videoId)) {
                 await this.prisma.card.delete({ where: { id: card.id } });
-                removedCards++;
                 continue;
             }
-
             const remote = remoteItems.find((v) => v.videoId === card.videoId)!;
             const needsUpdate =
                 remote.title !== card.title ||
                 remote.durationSeconds !== card.durationSeconds ||
-                remote.thumbnailUrl !== card.thumbnailUrl;
+                remote.thumbnailUrl !== card.thumbnailUrl ||
+                (remote.channelId && remote.channelId !== card.channelId);
 
             if (needsUpdate) {
                 await this.prisma.card.update({
@@ -77,12 +63,11 @@ export class PlaylistResyncService {
                         title: remote.title,
                         durationSeconds: remote.durationSeconds,
                         thumbnailUrl: remote.thumbnailUrl,
+                        channelId: remote.channelId ?? null,
+                        channelTitle: remote.channelTitle ?? null,
                     },
                 });
-                updatedCards++;
             }
         }
-
-        return { updatedCards, removedCards };
     }
 }

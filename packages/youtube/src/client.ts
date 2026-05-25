@@ -8,6 +8,8 @@ export interface YouTubeVideo {
   thumbnailUrl: string;
   durationSeconds: number;
   url: string;
+  channelId?: string;
+  channelTitle?: string;
 }
 
 export interface YouTubePlaylist {
@@ -52,7 +54,7 @@ export class YouTubeClient {
     type Resp = {
       items?: Array<{
         id: string;
-        snippet: { title: string; thumbnails?: Record<string, { url: string }> };
+        snippet: { title: string; thumbnails?: Record<string, { url: string }>; channelId?: string; channelTitle?: string };
         contentDetails?: { duration?: string };
       }>;
     };
@@ -68,6 +70,8 @@ export class YouTubeClient {
       thumbnailUrl: pickThumb(item.snippet.thumbnails, `https://img.youtube.com/vi/${videoId}/0.jpg`),
       durationSeconds: parseDuration(item.contentDetails?.duration ?? ""),
       url: `https://www.youtube.com/watch?v=${item.id}`,
+      channelId: item.snippet.channelId,
+      channelTitle: item.snippet.channelTitle,
     };
   }
 
@@ -79,7 +83,7 @@ export class YouTubeClient {
       type Resp = {
         items?: Array<{
           id: string;
-          snippet: { title: string; thumbnails?: Record<string, { url: string }> };
+          snippet: { title: string; thumbnails?: Record<string, { url: string }>; channelId?: string; channelTitle?: string };
           contentDetails?: { duration?: string };
         }>;
       };
@@ -94,6 +98,8 @@ export class YouTubeClient {
           thumbnailUrl: pickThumb(item.snippet.thumbnails, `https://img.youtube.com/vi/${item.id}/0.jpg`),
           durationSeconds: parseDuration(item.contentDetails?.duration ?? ""),
           url: `https://www.youtube.com/watch?v=${item.id}`,
+          channelId: item.snippet.channelId,
+          channelTitle: item.snippet.channelTitle,
         });
       }
     }
