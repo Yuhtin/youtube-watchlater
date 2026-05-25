@@ -17,12 +17,24 @@ export class UserService {
 
         const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        return this.prisma.user.create({
-            data: {
-                username: data.username,
-                password: hashedPassword,
-                imageUrl: data.imageUrl,
-            },
+        return this.prisma.$transaction(async (tx) => {
+            const user = await tx.user.create({
+                data: {
+                    username: data.username,
+                    password: hashedPassword,
+                    imageUrl: data.imageUrl,
+                },
+            });
+
+            await tx.list.create({
+                data: {
+                    name: 'default',
+                    userId: user.id,
+                    isDefault: true,
+                },
+            });
+
+            return user;
         });
     }
 
