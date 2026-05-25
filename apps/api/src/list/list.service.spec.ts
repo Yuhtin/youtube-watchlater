@@ -110,4 +110,33 @@ describe('ListService', () => {
             expect(prisma.list.delete).toHaveBeenCalledWith({ where: { id: 'l1' } });
         });
     });
+
+    describe('importFromYoutube', () => {
+        it('creates a list + cards from a YouTube playlist URL', async () => {
+            youtube.getPlaylist.mockResolvedValue({
+                playlistId: 'PL123', title: 'Rust Talks', thumbnailUrl: 'thumb',
+            });
+            youtube.getPlaylistItems.mockResolvedValue([
+                { videoId: 'v1', title: 'a', thumbnailUrl: 't', durationSeconds: 600, url: 'u1', channelId: 'c1', channelTitle: 'C1' },
+                { videoId: 'v2', title: 'b', thumbnailUrl: 't', durationSeconds: 900, url: 'u2', channelId: 'c1', channelTitle: 'C1' },
+            ]);
+            prisma.list.findFirst.mockResolvedValue(null);
+            prisma.list.aggregate.mockResolvedValue({ _max: { order: 0 } });
+            prisma.list.create.mockResolvedValue({
+                id: 'l-new', name: 'Rust Talks', userId: 'u1', youtubePlaylistId: 'PL123',
+            });
+
+            const result = await service.importFromYoutube('u1', 'PL123');
+
+            expect(youtube.getPlaylist).toHaveBeenCalledWith('PL123');
+            expect(prisma.list.create).toHaveBeenCalled();
+            expect(prisma.card.createMany).toHaveBeenCalled();
+            expect(result.id).toBe('l-new');
+        });
+
+        it('rejects when the user already imported that playlist', async () => {
+            prisma.list.findFirst.mockResolvedValue({ id: 'existing', youtubePlaylistId: 'PL123' });
+            await expect(service.importFromYoutube('u1', 'PL123')).rejects.toThrow(/already/i);
+        });
+    });
 });

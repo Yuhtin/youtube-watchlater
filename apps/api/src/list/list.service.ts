@@ -79,4 +79,55 @@ export class ListService {
 
         return { ok: true as const };
     }
+
+    async importFromYoutube(userId: string, playlistId: string) {
+        const existing = await this.prisma.list.findFirst({
+            where: { userId, youtubePlaylistId: playlistId },
+        });
+        if (existing) {
+            throw new ConflictException('Playlist already imported');
+        }
+
+        const meta = await this.youtube.getPlaylist(playlistId);
+        if (!meta) throw new NotFoundException('YouTube playlist not found');
+
+        const items = await this.youtube.getPlaylistItems(playlistId);
+
+        const { _max } = await this.prisma.list.aggregate({
+            where: { userId },
+            _max: { order: true },
+        });
+
+        return this.prisma.$transaction(async (tx: any) => {
+            const list = await tx.list.create({
+                data: {
+                    name: meta.title,
+                    userId,
+                    order: (_max.order ?? -1) + 1,
+                    youtubePlaylistId: meta.playlistId,
+                    thumbnailUrl: meta.thumbnailUrl,
+                },
+            });
+
+            if (items.length > 0) {
+                await tx.card.createMany({
+                    data: items.map((v: any, i: number) => ({
+                        videoId: v.videoId,
+                        title: v.title,
+                        url: v.url,
+                        thumbnailUrl: v.thumbnailUrl,
+                        durationSeconds: v.durationSeconds,
+                        channelId: v.channelId ?? null,
+                        channelTitle: v.channelTitle ?? null,
+                        userId,
+                        listId: list.id,
+                        order: i,
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+
+            return list;
+        });
+    }
 }
