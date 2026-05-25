@@ -16,26 +16,27 @@ model User {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   cards               Card[]
-  playlists           Playlist[]
+  lists               List[]
   sentSuggestions     Suggestion[] @relation("SentSuggestions")
   receivedSuggestions Suggestion[] @relation("ReceivedSuggestions")
 }
 
-model Playlist {
-  id              String   @id @default(uuid())
-  playlistId      String
-  title           String
-  userId          String
-  thumbnailUrl    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  durationSeconds Int?
+model List {
+  id                String   @id @default(uuid())
+  name              String
+  userId            String
+  order             Int      @default(0)
+  isDefault         Boolean  @default(false)
+  youtubePlaylistId String?
+  thumbnailUrl      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id])
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   cards Card[]
 
-  @@unique([playlistId, userId])
-  @@map("playlists")
+  @@unique([userId, name])
+  @@map("lists")
 }
 
 model Card {
@@ -47,13 +48,15 @@ model Card {
   status          ColumnType @default(WATCH_LATER)
   order           Int        @default(0)
   userId          String
-  playlistId      String?
+  listId          String
   durationSeconds Int?
+  channelId       String?
+  channelTitle    String?
   addedAt         DateTime   @default(now())
   updatedAt       DateTime   @default(now()) @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id])
-  playlist Playlist? @relation(fields: [playlistId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  list List  @relation(fields: [listId], references: [id])
 
   @@unique([videoId, userId])
   @@map("cards")
