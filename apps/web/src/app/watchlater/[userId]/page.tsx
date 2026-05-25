@@ -213,7 +213,6 @@ export default function WatchLaterPage() {
             }
 
             setIsAuthenticated(true);
-            fetchColumns();
             fetchSuggestions();
         } catch (error) {
             console.error('Invalid token:', error);
@@ -232,6 +231,11 @@ export default function WatchLaterPage() {
             setActiveListId(def.id);
         });
     }, [isAuthenticated, sidebarRefresh]);
+
+    useEffect(() => {
+        if (!isAuthenticated || activeListId === null) return;
+        fetchColumns();
+    }, [activeListId, isAuthenticated]);
 
     useEffect(() => {
         if (username) {
@@ -253,7 +257,8 @@ export default function WatchLaterPage() {
 
     const fetchColumns = async () => {
         try {
-            const data = await apiRequest(`/cards?userId=${userId}`);
+            const listParam = activeListId ? `&listId=${activeListId}` : '';
+            const data = await apiRequest(`/cards?userId=${userId}${listParam}`);
 
             const columnsFromServer: { [key in ColumnType]: Column } = {
                 WATCH_LATER: { id: ColumnType.WATCH_LATER, title: "Watch Later", videos: [] },
