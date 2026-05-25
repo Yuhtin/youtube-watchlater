@@ -17,18 +17,23 @@ Each card is a YouTube video pulled from the YouTube Data API. You drag it acros
 ## Preview
 
 <p align="center">
-  <img src="docs/landing.png" alt="Landing — pick a collection" width="49%" />
+  <img src="docs/landing.png" alt="Landing" width="49%" />
+  <img src="docs/collections.png" alt="Collections picker" width="49%" />
+</p>
+<p align="center">
   <img src="docs/login.png" alt="Per-collection login" width="49%" />
 </p>
 
 ## Features
 
-- **Kanban board** — three columns (`WATCH_LATER`, `WATCHING`, `WATCHED`) with drag-and-drop reordering and a persistent `order` field per card.
-- **YouTube ingestion, server-side** — paste a video URL or an entire playlist URL; the NestJS backend talks to the YouTube Data API and hydrates title, thumbnail and duration. The API key never leaves the server.
-- **Background re-sync** — a NestJS cron sweeps every imported playlist every 6h, refreshing titles/durations and removing cards for videos that were deleted on YouTube.
-- **Filters that matter** — full-text title search plus min/max duration and date ranges, composed server-side into a single Prisma `where`.
-- **Multi-user collections** — every collection is password-protected and isolated; a "Tech talks" board lives separately from "Cooking" without juggling accounts.
-- **Peer suggestions** — recommend a video to another user; they can accept it into their Watch Later or dismiss it.
+- **Lists** — named groups inside a collection, each with its own 3-column kanban. Imported YouTube playlists become Lists too — one mental model, not two.
+- **Kanban board** — drag-and-drop across `WATCH_LATER` → `WATCHING` → `WATCHED`, with persistent ordering per card.
+- **Smart pick** — server-side scoring engine picks what to watch from your backlog based on time available, video age, duration fit, series continuation, and channel diversity. Two modes: **Tonight** (single-pick modal) and **Queue** (multi-video page sized to a time slot).
+- **YouTube ingestion, server-side** — paste a video URL or an entire playlist URL; the NestJS backend talks to the YouTube Data API and hydrates title, thumbnail, duration, channel. The API key never leaves the server.
+- **Background re-sync** — a NestJS cron sweeps every imported List every 6h, refreshing titles/durations/channels and removing cards for videos that were deleted on YouTube.
+- **Filters that matter** — full-text title search plus min/max duration and date ranges, composed server-side into a single Prisma `where`. List scoping comes for free.
+- **Multi-user collections** — every collection is password-protected and isolated; you can have a "Tech talks" board separate from "Cooking" without juggling accounts.
+- **Peer suggestions** — recommend a video to another user on the same instance; they can accept it into their Watch Later or dismiss it.
 - **Virtualized lists** — `react-window` keeps the board smooth past a thousand cards per column.
 - **JWT auth** — stateless, per-collection sessions, signed with a strong secret enforced at boot.
 
@@ -178,17 +183,19 @@ Even though `YOUTUBE_API_KEY` is now server-only, restrict the key in Google Clo
 
 ## What's built
 
-| Module        | What it ships                                                                          |
-| ------------- | -------------------------------------------------------------------------------------- |
-| Landing       | Public picker showing every collection on the instance, with avatar and card count     |
-| Login         | Per-collection password screen, JWT minted on success                                  |
-| Kanban board  | Drag-and-drop across three columns, virtualized, with persistent order                 |
-| Filters       | Server-side title search + duration / date ranges                                      |
-| Playlists     | Import a YouTube playlist as a single card that expands into its videos                |
-| YouTube proxy | NestJS-side `/youtube/*` endpoints — videos, playlists, playlist items. Key never client-side. |
-| Re-sync cron  | Every 6h, refreshes titles/durations and prunes deleted videos from imported playlists |
-| Suggestions   | Send a video to another collection; they accept it into their Watch Later or dismiss   |
-| Auth          | NestJS + Passport JWT, bcrypt password hashing, refuse-to-boot on missing secret       |
+| Module        | What it ships                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Landing       | Real marketing page at `/` — Brutalist mono identity, hero, feature blurbs, footer with author links                           |
+| Collections   | Picker at `/collections` showing every collection on the instance, search, card count                                          |
+| Login         | Per-collection password screen, JWT minted on success                                                                          |
+| Lists         | Named groups inside a collection — sidebar nav, create/import/delete flows, each list has its own 3-column kanban              |
+| Kanban board  | Drag-and-drop across three columns, virtualized, with persistent order; scoped per List                                        |
+| Smart pick    | Server-side weighted scoring (age / duration fit / continuation / channel diversity) with **Tonight** modal + **Queue** page   |
+| Filters       | Server-side title search + duration / date ranges + list scoping                                                               |
+| YouTube proxy | NestJS-side `/youtube/*` endpoints — videos, playlists, playlist items. Key never client-side.                                 |
+| Re-sync cron  | Every 6h, refreshes titles/durations/channels and prunes deleted videos from imported Lists                                    |
+| Suggestions   | Send a video to another collection; they accept it into their Watch Later or dismiss                                           |
+| Auth          | NestJS + Passport JWT, bcrypt password hashing, refuse-to-boot on missing secret                                               |
 
 ## Architecture: hybrid monorepo
 
@@ -199,31 +206,34 @@ youtube-watchlater/
 ├── apps/
 │   ├── api/                NestJS 11 — REST API + scheduled jobs
 │   │   ├── src/
-│   │   │   ├── auth/       JWT login + Passport strategy
-│   │   │   ├── card/       CRUD, filtering, reorder
-│   │   │   ├── playlist/   Imported YouTube playlist rows
-│   │   │   ├── suggestion/ Peer-to-peer recommendations
-│   │   │   ├── user/       Accounts & collections
-│   │   │   ├── youtube/    Server-side YT Data API proxy
-│   │   │   ├── cron/       @nestjs/schedule — playlist re-sync
-│   │   │   ├── prisma/     Shared Prisma client wrapper
+│   │   │   ├── auth/        JWT login + Passport strategy
+│   │   │   ├── card/        CRUD, filtering, reorder
+│   │   │   ├── list/        Lists CRUD + import-from-YouTube + bulk status
+│   │   │   ├── smart-pick/  Scoring engine + tonight / queue endpoints
+│   │   │   ├── suggestion/  Peer-to-peer recommendations
+│   │   │   ├── user/        Accounts & collections
+│   │   │   ├── youtube/     Server-side YT Data API proxy
+│   │   │   ├── cron/        @nestjs/schedule — list re-sync
+│   │   │   ├── prisma/      Shared Prisma client wrapper
 │   │   │   └── main.ts
 │   │   └── Dockerfile
 │   │
-│   └── web/                Next.js 15 — App Router UI
+│   └── web/                Next.js 15 — App Router UI (Brutalist mono identity)
 │       ├── src/
 │       │   ├── app/
-│       │   │   ├── page.tsx                       Landing — pick a collection
-│       │   │   ├── login/[userId]/page.tsx        Per-collection login
-│       │   │   └── watchlater/[userId]/page.tsx   The kanban board
+│       │   │   ├── page.tsx                              Marketing landing at /
+│       │   │   ├── collections/page.tsx                  Collection picker at /collections
+│       │   │   ├── login/[userId]/page.tsx               Per-collection login
+│       │   │   ├── watchlater/[userId]/page.tsx          The kanban board
+│       │   │   └── watchlater/[userId]/queue/page.tsx    Smart pick queue page
 │       │   ├── components/
-│       │   │   ├── KanbanBoard.tsx
-│       │   │   ├── DroppableColumn.tsx
-│       │   │   ├── SortableItem.tsx
-│       │   │   ├── FilterBar.tsx
-│       │   │   ├── CreateUserModal.tsx
-│       │   │   └── ui/                            Radix primitives
-│       │   └── auth/                              Client-side JWT helpers
+│       │   │   ├── Sidebar.tsx                           Lists sidebar nav
+│       │   │   ├── KanbanBoard.tsx, SortableItem.tsx, DroppableColumn.tsx
+│       │   │   ├── CreateListModal.tsx, ImportPlaylistModal.tsx
+│       │   │   ├── SmartPickModal.tsx
+│       │   │   ├── CreateUserModal.tsx, FilterBar.tsx
+│       │   │   └── ui/                                   Radix primitives
+│       │   └── auth/                                     Client-side JWT helpers
 │       └── Dockerfile
 │
 ├── packages/
@@ -262,8 +272,9 @@ youtube-watchlater/
                  │  /youtube/videos/:id           │ ──┐
                  │  /youtube/playlists/:id        │   │
                  │  /youtube/playlists/:id/items  │   │  YOUTUBE_API_KEY
-                 │  /cards, /playlists, /users,   │   │  (server-only)
+                 │  /cards, /lists, /users,       │   │  (server-only)
                  │   /auth, /suggestions          │   │
+                 │  /smart-pick/{tonight,queue}   │   │
                  │  cron PlaylistResyncService    │   │
                  └────┬───────────────────────┬───┘   │
                       │                       │       │
@@ -289,12 +300,11 @@ A few decisions worth calling out:
 
 | Idea                       | Why                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------ |
-| Real landing page          | Today the landing *is* the user picker; the project needs a product story up front   |
-| Beyond kanban              | Shelves by topic, a "Tonight" queue, calendar-style watch plans                      |
 | Study plans                | Chain videos into a sequenced learning path with checkpoints                         |
-| Smart recommendations      | Surface what to watch next from *your own backlog* based on duration and freshness   |
 | Gamification               | Streaks, watch goals, hours-watched and channels-covered stats                       |
-| Lists inside a collection  | Named playlists *within* a collection, not just three fixed columns                  |
+| Per-user smart-pick weights| Let the user tune the scoring weights (age / fit / continuation / diversity)         |
+| Public sharing of Lists    | Share a study-plan or curated-talks List via a public URL                            |
+| Mobile-first redesign      | The current kanban is desktop-first; a touch-native layout would unlock phones       |
 | Notifications              | Push when a suggestion arrives or the cron deletes one of your cards                 |
 
 ## Limitations
