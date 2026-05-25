@@ -12,6 +12,7 @@ import { ImportPlaylistModal } from '@/src/components/ImportPlaylistModal';
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
+import { SmartPickModal } from "@/src/components/SmartPickModal";
 import { formatDuration, getRandomColor } from "@/src/lib/utils";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, Title, TimeScale, TooltipItem } from 'chart.js';
 import { Pie, Line } from 'react-chartjs-2';
@@ -119,6 +120,7 @@ export default function WatchLaterPage() {
     const [showResults, setShowResults] = useState(false);
     const [activeListId, setActiveListId] = useState<string | null>(null);
     const [sidebarRefresh, setSidebarRefresh] = useState(0);
+    const [isSmartPickOpen, setIsSmartPickOpen] = useState(false);
     const [isCreateListOpen, setIsCreateListOpen] = useState(false);
     const [isImportPlaylistOpen, setIsImportPlaylistOpen] = useState(false);
     const [playlists, setPlaylists] = useState<any[]>([]);
@@ -1280,6 +1282,12 @@ export default function WatchLaterPage() {
                 </div>
 
                 <div className="flex items-center gap-3 mt-4 md:mt-0">
+                    <button
+                        onClick={() => setIsSmartPickOpen(true)}
+                        className="border-2 border-ink px-3 py-1.5 text-[11px] font-bold font-mono hover:bg-ink hover:text-paper"
+                    >
+                        ▸ SMART_PICK()
+                    </button>
                     <button
                         onClick={() => setIsSettingsModalOpen(true)}
                         className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-lg border border-white/20 relative"
@@ -2661,6 +2669,23 @@ export default function WatchLaterPage() {
                 open={isImportPlaylistOpen}
                 onClose={() => setIsImportPlaylistOpen(false)}
                 onImported={() => setSidebarRefresh((n) => n + 1)}
+            />
+            <SmartPickModal
+                open={isSmartPickOpen}
+                onClose={() => setIsSmartPickOpen(false)}
+                activeListId={activeListId}
+                onWatch={async (card) => {
+                    // open in YouTube
+                    if (card.url) window.open(card.url, '_blank');
+                    // mark as WATCHING
+                    await apiRequest(`/cards/${card.videoId}`, {
+                        method: 'PATCH',
+                        body: { status: 'WATCHING' },
+                    });
+                    // refresh board
+                    setSidebarRefresh((n) => n + 1);
+                    setIsSmartPickOpen(false);
+                }}
             />
         </div>
     );
