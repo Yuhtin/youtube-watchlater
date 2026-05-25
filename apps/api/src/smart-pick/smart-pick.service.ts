@@ -9,6 +9,12 @@ interface TonightInput {
     excludeVideoIds?: string[];
 }
 
+interface QueueInput {
+    timeMinutes: number;
+    listId?: string;
+    keepVideoIds?: string[];
+}
+
 @Injectable()
 export class SmartPickService {
     constructor(private readonly prisma: PrismaService) { }
@@ -72,5 +78,48 @@ export class SmartPickService {
             channelId: c.channelId ?? null,
             listYoutubePlaylistId: c.list?.youtubePlaylistId ?? null,
         };
+    }
+
+    async queue(userId: string, input: QueueInput) {
+        const targetSeconds = input.timeMinutes * 60;
+        const max = targetSeconds * 1.1;
+
+        const all = await this.loadCandidates(userId, input.listId);
+        const kept = input.keepVideoIds ?? [];
+        const pool = all.filter((c: any) => !kept.includes(c.videoId));
+
+        const queue: any[] = [];
+        const reasons: string[][] = [];
+        const pickedChannelIds = new Set<string>();
+        let used = 0;
+
+        while (queue.length < 4) {
+            const remaining = max - used;
+            const ctx = await this.buildContext(userId, Math.max(targetSeconds - used, 60), pickedChannelIds);
+
+            const scored = pool
+                .filter((c: any) => !queue.some((q) => q.id === c.id))
+                .map((c: any) => ({ card: c, result: scoreCard(this.toScoreInput(c), ctx) }))
+                .filter((s: any) => s.result.eligible && (s.card.durationSeconds ?? Infinity) <= remaining)
+                .sort((a: any, b: any) => b.result.score - a.result.score);
+
+            if (scored.length === 0) break;
+            const next = scored[0];
+            queue.push(next.card);
+            reasons.push(next.result.reasons);
+            if (next.card.channelId) pickedChannelIds.add(next.card.channelId);
+            used += next.card.durationSeconds ?? 0;
+        }
+
+        return { cards: queue, reasons };
+    }
+
+    async queueSwap(userId: string, input: QueueInput) {
+        const single = await this.tonight(userId, {
+            timeMinutes: input.timeMinutes,
+            listId: input.listId,
+            excludeVideoIds: input.keepVideoIds,
+        });
+        return single;
     }
 }
