@@ -15,10 +15,11 @@ interface Props {
     onSelect: (listId: string) => void;
     onNewList: () => void;
     onImportPlaylist: () => void;
+    onDelete: (deletedId: string, defaultListId: string) => void;
     refreshKey?: number;
 }
 
-export function Sidebar({ activeListId, onSelect, onNewList, onImportPlaylist, refreshKey }: Props) {
+export function Sidebar({ activeListId, onSelect, onNewList, onImportPlaylist, onDelete, refreshKey }: Props) {
     const [lists, setLists] = useState<List[]>([]);
 
     useEffect(() => {
@@ -34,12 +35,28 @@ export function Sidebar({ activeListId, onSelect, onNewList, onImportPlaylist, r
                     <button
                         key={l.id}
                         onClick={() => onSelect(l.id)}
-                        className={`block w-full text-left px-2 py-1.5 text-[11px] flex justify-between mb-1 ${
+                        className={`group block w-full text-left px-2 py-1.5 text-[11px] flex justify-between mb-1 ${
                             isActive ? 'bg-ink text-paper font-bold' : 'hover:bg-paper'
                         }`}
                     >
                         <span>{l.youtubePlaylistId ? `// ${l.name}` : l.name}</span>
-                        <span className="text-[9px] opacity-60">{l._count.cards}</span>
+                        <span className="flex items-center gap-1">
+                            <span className="text-[9px] opacity-60">{l._count.cards}</span>
+                            {!l.isDefault && (
+                                <span
+                                    className="hidden group-hover:inline text-[9px] text-accent font-bold cursor-pointer"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (!confirm(`Delete list "${l.name}"? Cards will move to default.`)) return;
+                                        await apiRequest(`/lists/${l.id}`, { method: 'DELETE' });
+                                        const defaultList = lists.find((x) => x.isDefault);
+                                        onDelete(l.id, defaultList?.id ?? '');
+                                    }}
+                                >
+                                    [x]
+                                </span>
+                            )}
+                        </span>
                     </button>
                 );
             })}

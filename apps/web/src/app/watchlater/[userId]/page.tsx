@@ -6,6 +6,9 @@ import { toast, Toaster } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Dialog } from '@headlessui/react';
 import { KanbanBoard, Column as KanbanColumn, CardItem } from '../../../components/KanbanBoard';
+import { Sidebar } from '@/src/components/Sidebar';
+import { CreateListModal } from '@/src/components/CreateListModal';
+import { ImportPlaylistModal } from '@/src/components/ImportPlaylistModal';
 import { apiRequest } from '@/src/auth/utility';
 import { jwtDecode } from "jwt-decode";
 import { FilterBar, FilterOptions } from "@/src/components/FilterBar";
@@ -94,7 +97,6 @@ const formatTotalTime = (seconds: number): string => {
 
 export default function WatchLaterPage() {
     const [videoUrl, setVideoUrl] = useState("");
-    const [playlistUrl, setPlaylistUrl] = useState('');
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeVideo, setActiveVideo] = useState<Video | null>(null);
     const [username, setUsername] = useState("");
@@ -115,6 +117,10 @@ export default function WatchLaterPage() {
         duplicates: 0
     });
     const [showResults, setShowResults] = useState(false);
+    const [activeListId, setActiveListId] = useState<string | null>(null);
+    const [sidebarRefresh, setSidebarRefresh] = useState(0);
+    const [isCreateListOpen, setIsCreateListOpen] = useState(false);
+    const [isImportPlaylistOpen, setIsImportPlaylistOpen] = useState(false);
     const [playlists, setPlaylists] = useState<any[]>([]);
     const [selectedPlaylist, setSelectedPlaylist] = useState<any>(null);
     const [playlistActiveId, setPlaylistActiveId] = useState<string | null>(null);
@@ -206,6 +212,7 @@ export default function WatchLaterPage() {
                 setProfileImagePreview(storedUserImage);
             }
 
+            setIsAuthenticated(true);
             fetchColumns();
             fetchSuggestions();
         } catch (error) {
@@ -214,6 +221,17 @@ export default function WatchLaterPage() {
             router.push(`/login/${userId}`);
         }
     }, [userId, router]);
+
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        apiRequest('/lists').then((lists) => {
+            if (!Array.isArray(lists) || lists.length === 0) return;
+            const def = lists.find((l: any) => l.isDefault) ?? lists[0];
+            setActiveListId(def.id);
+        });
+    }, [isAuthenticated, sidebarRefresh]);
 
     useEffect(() => {
         if (username) {
@@ -258,53 +276,11 @@ export default function WatchLaterPage() {
             });
 
             setColumns(columnsFromServer);
-            fetchPlaylists();
         } catch (error) {
             console.error("Failed to fetch columns:", error);
             toast.error("Failed to load videos", {
                 description: "Check your connection and try again"
             });
-        }
-    };
-
-    const fetchPlaylists = async () => {
-        try {
-            const response = await apiRequest('/playlists');
-            if (response) {
-                setPlaylists(response);
-
-                const playlistCards = response.map((playlist: { id: string; playlistId: string; title: string; thumbnailUrl: string; createdAt: string | number | Date; _count: any; durationSeconds: any; }) => ({
-                    id: playlist.id,
-                    videoId: 'playlist-' + playlist.playlistId,
-                    title: playlist.title,
-                    thumbnailUrl: playlist.thumbnailUrl || 'https://via.placeholder.com/300x168',
-                    url: `https://www.youtube.com/playlist?list=${playlist.playlistId}`,
-                    status: getPlaylistStatus(playlist),
-                    addedAt: new Date(playlist.createdAt).getTime(),
-                    isPlaylist: true,
-                    playlistData: playlist,
-                    _count: playlist._count,
-                    durationSeconds: playlist.durationSeconds,
-                }));
-
-                setColumns(prev => {
-                    const newColumns = { ...prev };
-
-                    playlistCards.forEach((card: Video) => {
-                        const columnKey = card.status;
-                        if (newColumns[columnKey]) {
-                            newColumns[columnKey].videos = [
-                                ...newColumns[columnKey].videos.filter(v => v.videoId !== card.videoId),
-                                card
-                            ];
-                        }
-                    });
-
-                    return newColumns;
-                });
-            }
-        } catch (error) {
-            console.error("Failed to fetch playlists:", error);
         }
     };
 
@@ -343,17 +319,10 @@ export default function WatchLaterPage() {
         }
 
         if (isPlaylist) {
-            const playlistId = id.replace('playlist-', '');
-            const existingPlaylist = getPlaylistById(playlistId);
-            if (existingPlaylist) {
-                toast.warning("Playlist already exists in your collection", {
-                    description: "This playlist is already in your collection"
-                });
-                setVideoUrl("");
-                return;
-            }
-
-            addPlaylist(playlistId);
+            toast.info("Use Import from YouTube to add a playlist", {
+                description: "Click '+ IMPORT_FROM_YT()' in the sidebar"
+            });
+            setVideoUrl("");
             return;
         }
 
@@ -663,92 +632,6 @@ export default function WatchLaterPage() {
         } catch (error) {
             console.log("Issue fetching playlist videos:", error);
             return [];
-        }
-    };
-
-    const addPlaylist = async (playlistId: string) => {
-        const loadingToast = toast.loading("Processing playlist...");
-
-        try {
-            const playlistDetails = await fetchPlaylistDetails(playlistId);
-            if (!playlistDetails) {
-                toast.dismiss(loadingToast);
-                toast.error("Failed to fetch playlist details", {
-                    description: "Please check the playlist link and try again"
-                });
-
-                return;
-            }
-
-            const { title, thumbnailUrl } = playlistDetails;
-
-            const playlistResponse = await apiRequest('/playlists', {
-                method: "POST",
-                body: {
-                    playlistId: playlistId,
-                    title,
-                    thumbnailUrl,
-                },
-            });
-
-            if (playlistResponse.statusCode === 409) {
-                toast.dismiss(loadingToast);
-                toast.warning("Playlist already exists in your collection");
-                setPlaylistUrl("");
-                return;
-            }
-
-            const videos = await fetchPlaylistVideos(playlistId);
-
-            let addedCount = 0;
-            let duplicateCount = 0;
-            let failedCount = 0;
-
-            for (const video of videos) {
-                try {
-                    const response = await apiRequest('/cards', {
-                        method: "POST",
-                        body: {
-                            ...video,
-                            status: "WATCH_LATER",
-                            playlistId: playlistResponse.id,
-                            userId,
-                        },
-                    });
-
-                    if (response.statusCode === 409) {
-                        duplicateCount++;
-                    } else if (response.videoId) {
-                        addedCount++;
-                    } else {
-                        failedCount++;
-                    }
-                } catch (error) {
-                    failedCount++;
-                }
-            }
-
-            toast.dismiss(loadingToast);
-
-            if (addedCount > 0) {
-                toast.success(`Added ${addedCount} videos from playlist`, {
-                    description: title
-                });
-
-                fetchColumns();
-            } else if (duplicateCount > 0 && addedCount === 0) {
-                toast.info("All videos from this playlist are already in your collection");
-            } else {
-                toast.error("Failed to add videos from playlist");
-            }
-
-            setPlaylistUrl("");
-        } catch (error) {
-            console.error("Failed to add playlist:", error);
-            toast.dismiss(loadingToast);
-            toast.error("Error processing playlist", {
-                description: "An unexpected error occurred"
-            });
         }
     };
 
@@ -1353,6 +1236,19 @@ export default function WatchLaterPage() {
     }, [activeSettingsTab, isSettingsModalOpen, columns]);
 
     return (
+        <div className="flex h-screen bg-paper text-ink">
+            <Sidebar
+                activeListId={activeListId}
+                onSelect={setActiveListId}
+                onNewList={() => setIsCreateListOpen(true)}
+                onImportPlaylist={() => setIsImportPlaylistOpen(true)}
+                onDelete={(_, defaultId) => {
+                    setActiveListId(defaultId);
+                    setSidebarRefresh((n) => n + 1);
+                }}
+                refreshKey={sidebarRefresh}
+            />
+            <div className="flex-1 overflow-y-auto">
         <div className="min-h-screen bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
             <Toaster
                 position="top-center"
@@ -2852,6 +2748,19 @@ export default function WatchLaterPage() {
                     </Dialog.Panel>
                 </div>
             </Dialog>
+        </div>
+            </div>
+
+            <CreateListModal
+                open={isCreateListOpen}
+                onClose={() => setIsCreateListOpen(false)}
+                onCreated={() => setSidebarRefresh((n) => n + 1)}
+            />
+            <ImportPlaylistModal
+                open={isImportPlaylistOpen}
+                onClose={() => setIsImportPlaylistOpen(false)}
+                onImported={() => setSidebarRefresh((n) => n + 1)}
+            />
         </div>
     );
 }
