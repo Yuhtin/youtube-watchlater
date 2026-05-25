@@ -130,4 +130,15 @@ export class ListService {
             return list;
         });
     }
+
+    async bulkUpdateCardStatus(userId: string, listId: string, status: ColumnType) {
+        const list = await this.prisma.list.findFirst({ where: { id: listId, userId } });
+        if (!list) throw new NotFoundException('List not found');
+
+        const res = await this.prisma.card.updateMany({
+            where: { listId, userId },
+            data: { status },
+        });
+        return { updatedCount: res.count };
+    }
 }

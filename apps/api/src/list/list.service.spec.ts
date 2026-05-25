@@ -139,4 +139,19 @@ describe('ListService', () => {
             await expect(service.importFromYoutube('u1', 'PL123')).rejects.toThrow(/already/i);
         });
     });
+
+    describe('bulkUpdateCardStatus', () => {
+        it('updates every card of the list to the given status', async () => {
+            prisma.list.findFirst.mockResolvedValue({ id: 'l1', userId: 'u1' });
+            prisma.card.updateMany.mockResolvedValue({ count: 7 });
+
+            const result = await service.bulkUpdateCardStatus('u1', 'l1', 'WATCHED' as any);
+
+            expect(prisma.card.updateMany).toHaveBeenCalledWith({
+                where: { listId: 'l1', userId: 'u1' },
+                data: { status: 'WATCHED' },
+            });
+            expect(result.updatedCount).toBe(7);
+        });
+    });
 });
