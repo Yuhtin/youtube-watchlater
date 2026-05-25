@@ -89,4 +89,25 @@ describe('ListService', () => {
             await expect(service.update('u1', 'l1', { name: 'x' })).rejects.toThrow();
         });
     });
+
+    describe('delete', () => {
+        it('refuses to delete the default list', async () => {
+            prisma.list.findFirst.mockResolvedValue({ id: 'l1', userId: 'u1', isDefault: true });
+            await expect(service.delete('u1', 'l1')).rejects.toThrow(/default/i);
+        });
+
+        it('moves cards to the default list, then deletes the list', async () => {
+            prisma.list.findFirst
+                .mockResolvedValueOnce({ id: 'l1', userId: 'u1', isDefault: false })
+                .mockResolvedValueOnce({ id: 'default-l', userId: 'u1', isDefault: true });
+
+            await service.delete('u1', 'l1');
+
+            expect(prisma.card.updateMany).toHaveBeenCalledWith({
+                where: { listId: 'l1', userId: 'u1' },
+                data: { listId: 'default-l' },
+            });
+            expect(prisma.list.delete).toHaveBeenCalledWith({ where: { id: 'l1' } });
+        });
+    });
 });

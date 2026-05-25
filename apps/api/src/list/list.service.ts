@@ -56,4 +56,27 @@ export class ListService {
             },
         });
     }
+
+    async delete(userId: string, listId: string) {
+        const list = await this.prisma.list.findFirst({ where: { id: listId, userId } });
+        if (!list) throw new NotFoundException('List not found');
+        if (list.isDefault) throw new ForbiddenException('Cannot delete the default list');
+
+        const defaultList = await this.prisma.list.findFirst({
+            where: { userId, isDefault: true },
+        });
+        if (!defaultList) {
+            throw new NotFoundException('Default list missing — data is inconsistent');
+        }
+
+        await this.prisma.$transaction(async (tx) => {
+            await tx.card.updateMany({
+                where: { listId, userId },
+                data: { listId: defaultList.id },
+            });
+            await tx.list.delete({ where: { id: listId } });
+        });
+
+        return { ok: true as const };
+    }
 }
