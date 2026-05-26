@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Clock, CalendarDays, ArrowDown, ArrowUp, X, Filter } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Search, Clock, CalendarDays, ArrowDown, ArrowUp, X, Filter } from 'lucide-react';
 import { Dialog, DialogContent } from '@/src/components/ui/dialog';
 
 export type SortOrder = 'newest' | 'oldest' | 'shortest' | 'longest';
@@ -23,12 +22,12 @@ const DEFAULT_FILTERS: FilterOptions = {
 };
 
 const DURATION_OPTIONS = [
-  { value: 5 * 60, label: '5 min' },
-  { value: 10 * 60, label: '10 min' },
-  { value: 15 * 60, label: '15 min' },
-  { value: 30 * 60, label: '30 min' },
-  { value: 60 * 60, label: '60 min' },
-  { value: null, label: 'Any' },
+  { value: 5 * 60, label: '5m' },
+  { value: 10 * 60, label: '10m' },
+  { value: 15 * 60, label: '15m' },
+  { value: 30 * 60, label: '30m' },
+  { value: 60 * 60, label: '60m' },
+  { value: null, label: 'any' },
 ];
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -38,38 +37,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const [filters, setFilters] = useState<FilterOptions>(initialFilters);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
-  
+
   const activeFilterCount = [
     filters.search,
     filters.maxDuration !== null,
     filters.sortOrder !== 'newest',
   ].filter(Boolean).length;
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: debouncedSearch }));
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [debouncedSearch]);
-  
+
   useEffect(() => {
     onChange(filters);
   }, [filters, onChange]);
-  
+
   const applyFilters = (newFilters: Partial<FilterOptions>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
-  
+
   const clearAllFilters = () => {
     setFilters(DEFAULT_FILTERS);
     setDebouncedSearch('');
   };
-  
+
   const removeFilter = (filterKey: keyof FilterOptions) => {
     setFilters(prev => ({
       ...prev,
-      [filterKey]: DEFAULT_FILTERS[filterKey]
+      [filterKey]: DEFAULT_FILTERS[filterKey],
     }));
     if (filterKey === 'search') {
       setDebouncedSearch('');
@@ -89,56 +88,59 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const isDateSortActive = filters.sortOrder === 'newest' || filters.sortOrder === 'oldest';
   const isDurationSortActive = filters.sortOrder === 'shortest' || filters.sortOrder === 'longest';
 
+  const chip = (active: boolean) =>
+    `border-1.5 border-ink px-2 py-1 text-[10px] font-bold font-mono ${
+      active ? 'bg-ink text-paper' : 'bg-white hover:bg-paper'
+    }`;
+
   return (
     <>
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end">
-        {(activeFilterCount > 0) && (
-          <div className="mb-3 flex flex-col items-end gap-2">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {activeFilterCount > 0 && (
+          <div className="flex flex-col items-end gap-1">
             {filters.search && (
-              <Badge 
-                className="bg-white/10 backdrop-blur-md hover:bg-white/15 text-white px-3 py-1.5 flex items-center gap-1.5 shadow-lg"
+              <button
                 onClick={() => removeFilter('search')}
+                className="bg-white border-1.5 border-ink text-ink px-2 py-1 flex items-center gap-1.5 font-mono text-[10px] font-bold hover:bg-paper"
               >
-                <span className="text-xs font-normal">Search: {filters.search}</span>
-                <X size={14} />
-              </Badge>
+                <span>search: {filters.search}</span>
+                <X size={12} />
+              </button>
             )}
-            
+
             {filters.maxDuration !== null && (
-              <Badge 
-                className="bg-white/10 backdrop-blur-md hover:bg-white/15 text-white px-3 py-1.5 flex items-center gap-1.5 shadow-lg"
+              <button
                 onClick={() => removeFilter('maxDuration')}
+                className="bg-white border-1.5 border-ink text-ink px-2 py-1 flex items-center gap-1.5 font-mono text-[10px] font-bold hover:bg-paper"
               >
-                <span className="text-xs font-normal">
-                  Max duration: {Math.floor(filters.maxDuration / 60)} min
-                </span>
-                <X size={14} />
-              </Badge>
+                <span>max: {Math.floor(filters.maxDuration / 60)}m</span>
+                <X size={12} />
+              </button>
             )}
-            
+
             {filters.sortOrder !== 'newest' && (
-              <Badge 
-                className="bg-white/10 backdrop-blur-md hover:bg-white/15 text-white px-3 py-1.5 flex items-center gap-1.5 shadow-lg"
+              <button
                 onClick={() => removeFilter('sortOrder')}
+                className="bg-white border-1.5 border-ink text-ink px-2 py-1 flex items-center gap-1.5 font-mono text-[10px] font-bold hover:bg-paper"
               >
-                <span className="text-xs font-normal">
-                  Sort: {filters.sortOrder === 'oldest' ? 'Oldest first' : 
-                         filters.sortOrder === 'shortest' ? 'Shortest first' : 
-                         'Longest first'}
+                <span>
+                  sort: {filters.sortOrder === 'oldest' ? 'oldest' :
+                         filters.sortOrder === 'shortest' ? 'shortest' :
+                         'longest'}
                 </span>
-                <X size={14} />
-              </Badge>
+                <X size={12} />
+              </button>
             )}
           </div>
         )}
-        
-        <button 
+
+        <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 rounded-full w-14 h-14 flex items-center justify-center text-white shadow-xl transition-all duration-200 hover:scale-105"
+          className="relative bg-ink text-paper border-2 border-ink shadow-brutal-red w-12 h-12 flex items-center justify-center hover:translate-y-px transition-transform"
         >
-          <Filter className="w-6 h-6" />
+          <Filter className="w-5 h-5" />
           {activeFilterCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-white text-blue-600 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+            <span className="absolute -top-2 -right-2 bg-accent text-paper text-[9px] font-bold w-5 h-5 flex items-center justify-center border-1.5 border-ink">
               {activeFilterCount}
             </span>
           )}
@@ -146,45 +148,44 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="bg-zinc-900/95 backdrop-blur-xl border border-white/20 text-white p-6 shadow-xl rounded-xl sm:max-w-md" style={{ zIndex: 100 }}>
-          <div className="flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-white">Filter Videos</h2>
-              <button 
-                onClick={clearAllFilters}
-                className="text-sm text-blue-400 hover:text-blue-300"
-              >
-                Reset all filters
-              </button>
-            </div>
-            
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
-                <Search size={18} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search videos..."
-                value={debouncedSearch}
-                onChange={(e) => setDebouncedSearch(e.target.value)}
-                className="w-full py-3 pl-10 pr-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/50 focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/30"
-                autoFocus
-              />
-            </div>
-            
+        <DialogContent
+          className="bg-paper border-2 border-ink text-ink p-0 shadow-brutal-red sm:max-w-md"
+          style={{ zIndex: 100, borderRadius: 0 }}
+        >
+          <div className="border-b-2 border-ink p-2 px-3 flex justify-between text-[11px] font-bold font-mono">
+            <span>▸ FILTER_VIDEOS</span>
+            <button onClick={clearAllFilters} className="text-accent hover:underline">
+              [reset]
+            </button>
+          </div>
+
+          <div className="p-4 flex flex-col gap-5 font-mono">
             <div>
-              <h4 className="text-sm font-medium mb-3 flex items-center">
-                <Clock size={14} className="mr-2" /> Video Duration
-              </h4>
-              <div className="flex flex-wrap gap-2">
+              <label className="block text-[10px] font-bold tracking-wider mb-2">▸ SEARCH</label>
+              <div className="relative">
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500">
+                  <Search size={16} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="search videos…"
+                  value={debouncedSearch}
+                  onChange={(e) => setDebouncedSearch(e.target.value)}
+                  className="w-full py-2 pl-9 pr-3 border-1.5 border-ink bg-white text-ink placeholder-neutral-500 focus:outline-none text-[12px]"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold tracking-wider mb-2 flex items-center">
+                <Clock size={12} className="mr-1.5" /> ▸ MAX_DURATION
+              </label>
+              <div className="flex flex-wrap gap-1">
                 {DURATION_OPTIONS.map((option) => (
                   <button
                     key={option.value?.toString() || 'null'}
-                    className={`px-3 py-1.5 rounded-full text-sm ${
-                      filters.maxDuration === option.value 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-white/10 text-white/70 hover:bg-white/15'
-                    } transition-colors`}
+                    className={chip(filters.maxDuration === option.value)}
                     onClick={() => applyFilters({ maxDuration: option.value })}
                   >
                     {option.label}
@@ -192,45 +193,41 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 ))}
               </div>
             </div>
-            
+
             <div>
-              <h4 className="text-sm font-medium mb-3">Sort By</h4>
-              <div className="flex gap-3">
+              <label className="block text-[10px] font-bold tracking-wider mb-2">▸ SORT_BY</label>
+              <div className="flex gap-1.5">
                 <button
                   onClick={toggleDateSort}
-                  className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-sm flex-1 ${
-                    isDateSortActive 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-white/10 text-white/70 hover:bg-white/15'
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold flex-1 border-1.5 border-ink ${
+                    isDateSortActive ? 'bg-ink text-paper' : 'bg-white hover:bg-paper'
                   }`}
                 >
-                  <CalendarDays size={16} />
-                  <span>Date</span>
-                  {filters.sortOrder === 'newest' && <ArrowDown size={16} />}
-                  {filters.sortOrder === 'oldest' && <ArrowUp size={16} />}
+                  <CalendarDays size={14} />
+                  <span>date</span>
+                  {filters.sortOrder === 'newest' && <ArrowDown size={14} />}
+                  {filters.sortOrder === 'oldest' && <ArrowUp size={14} />}
                 </button>
-                
+
                 <button
                   onClick={toggleDurationSort}
-                  className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-sm flex-1 ${
-                    isDurationSortActive 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-white/10 text-white/70 hover:bg-white/15'
+                  className={`flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold flex-1 border-1.5 border-ink ${
+                    isDurationSortActive ? 'bg-ink text-paper' : 'bg-white hover:bg-paper'
                   }`}
                 >
-                  <Clock size={16} />
-                  <span>Length</span>
-                  {filters.sortOrder === 'shortest' && <ArrowUp size={16} />}
-                  {filters.sortOrder === 'longest' && <ArrowDown size={16} />}
+                  <Clock size={14} />
+                  <span>length</span>
+                  {filters.sortOrder === 'shortest' && <ArrowUp size={14} />}
+                  {filters.sortOrder === 'longest' && <ArrowDown size={14} />}
                 </button>
               </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setIsModalOpen(false)}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg mt-2 w-full"
+              className="bg-ink text-paper border-2 border-ink shadow-brutal-red py-2.5 px-4 w-full font-bold font-mono text-[11px]"
             >
-              Apply Filters
+              ▶ APPLY FILTERS
             </button>
           </div>
         </DialogContent>

@@ -225,14 +225,16 @@ export default function WatchLaterPage() {
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+    // Picks a default list once, when no list is selected yet. Subsequent
+    // refreshes of /lists are handled by the Sidebar component itself.
     useEffect(() => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || activeListId !== null) return;
         apiRequest('/lists').then((lists) => {
             if (!Array.isArray(lists) || lists.length === 0) return;
             const def = lists.find((l: any) => l.isDefault) ?? lists[0];
             setActiveListId(def.id);
         });
-    }, [isAuthenticated, sidebarRefresh]);
+    }, [isAuthenticated, activeListId]);
 
     useEffect(() => {
         if (!isAuthenticated || activeListId === null) return;
@@ -283,6 +285,8 @@ export default function WatchLaterPage() {
             });
 
             setColumns(columnsFromServer);
+            // Keep the Sidebar's per-list count in sync with what just changed.
+            setSidebarRefresh((n) => n + 1);
         } catch (error) {
             console.error("Failed to fetch columns:", error);
             toast.error("Failed to load videos", {
@@ -1258,44 +1262,44 @@ export default function WatchLaterPage() {
                 refreshKey={sidebarRefresh}
             />
             <div className="flex-1 overflow-y-auto">
-        <div className="min-h-screen bg-cover bg-fixed bg-center p-6 md:p-10 before:content-[''] before:absolute before:inset-0 before:bg-black/40 before:z-[-1] relative">
+        <div className="min-h-screen bg-paper text-ink p-6 md:p-8">
             <Toaster
                 position="top-center"
                 expand={false}
-                richColors
                 toastOptions={{
                     style: {
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        backdropFilter: 'blur(8px)',
-                        color: 'white',
-                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                        background: '#f5f1e8',
+                        color: '#0a0a0a',
+                        border: '1.5px solid #0a0a0a',
+                        borderRadius: '0',
+                        boxShadow: '3px 3px 0 #dc2626',
+                        fontFamily: 'var(--font-mono), JetBrains Mono, monospace',
+                        fontSize: '12px',
                     },
                 }}
             />
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 backdrop-blur-lg bg-white/5 border border-white/20 rounded-xl p-6 shadow-xl">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-2 border-ink bg-white p-4">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center">
-                        <Youtube className="h-8 w-8 mr-3 text-red-500" />
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-300">
-                            {username}'s Watch Later
-                        </span>
+                    <h1 className="font-display font-black text-[26px] lowercase tracking-tight flex items-center">
+                        <Youtube className="h-7 w-7 mr-3 text-accent" />
+                        <span>{username}'s watch later</span>
                     </h1>
                 </div>
 
-                <div className="flex items-center gap-3 mt-4 md:mt-0">
+                <div className="flex items-center gap-2 mt-3 md:mt-0">
                     <button
                         onClick={() => setIsSmartPickOpen(true)}
-                        className="border-2 border-ink px-3 py-1.5 text-[11px] font-bold font-mono hover:bg-ink hover:text-paper"
+                        className="border-2 border-ink bg-ink text-paper px-3 py-1.5 text-[11px] font-bold font-mono shadow-brutal-red hover:translate-y-px transition-transform"
                     >
                         ▸ SMART_PICK()
                     </button>
                     <button
                         onClick={() => setIsSettingsModalOpen(true)}
-                        className="flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors px-3 py-1.5 rounded-lg border border-white/20 relative"
+                        className="flex items-center gap-2 border-2 border-ink bg-white px-2 py-1 font-mono text-[11px] relative hover:bg-paper"
                     >
-                        <span className="text-white text-sm">{username}</span>
-                        <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 overflow-hidden flex items-center justify-center">
+                        <span className="font-bold">{username}</span>
+                        <div className="w-7 h-7 border-1.5 border-ink overflow-hidden flex items-center justify-center bg-paper">
                             {userImage ? (
                                 <img
                                     src={userImage}
@@ -1303,14 +1307,14 @@ export default function WatchLaterPage() {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="text-white/70 text-sm font-semibold">
+                                <div className="text-ink text-xs font-bold">
                                     {username?.charAt(0)?.toUpperCase() || "U"}
                                 </div>
                             )}
                         </div>
 
                         {unreadSuggestions > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full border border-black/20 shadow-lg">
+                            <span className="absolute -top-2 -right-2 bg-accent text-paper text-[9px] font-bold w-4 h-4 flex items-center justify-center border-1.5 border-ink">
                                 {unreadSuggestions}
                             </span>
                         )}
@@ -1318,40 +1322,40 @@ export default function WatchLaterPage() {
                 </div>
             </div>
 
-            <div className="mb-10 backdrop-blur-xl bg-white/10 border border-white/30 rounded-xl shadow-xl overflow-hidden">
-                <div className="p-6">
-                    <h2 className="text-xl font-semibold text-white mb-4">Add a new video!</h2>
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-grow flex items-center bg-black/10 border border-white/20 rounded-lg overflow-hidden">
-                            <span className="pl-3 text-red-400">
-                                <Youtube size={20} />
-                            </span>
-                            <input
-                                type="text"
-                                placeholder="Paste YouTube URL here..."
-                                value={videoUrl}
-                                onChange={(e) => setVideoUrl(e.target.value)}
-                                className="flex-grow p-3 bg-transparent text-white placeholder-slate-400 focus:outline-none"
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        addVideo();
-                                    }
-                                }}
-                            />
-                        </div>
-                        <button
-                            onClick={addVideo}
-                            className="whitespace-nowrap bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-3 rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-lg flex items-center justify-center border border-red-500/20 pulse-glass"
-                        >
-                            <Plus className="mr-2 h-5 w-5" /> Add Video
-                        </button>
-                        <button
-                            onClick={() => setIsBulkAddModalOpen(true)}
-                            className="whitespace-nowrap bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg flex items-center justify-center border border-blue-500/20"
-                        >
-                            <List className="mr-2 h-5 w-5" /> Bulk Add
-                        </button>
+            <div className="mb-6 border-2 border-ink bg-white">
+                <div className="border-b-2 border-ink p-2 px-3 text-[10px] font-bold font-mono tracking-wider">
+                    ▸ ADD_NEW_VIDEO
+                </div>
+                <div className="p-4 flex flex-col md:flex-row gap-2">
+                    <div className="flex-grow flex items-center bg-paper border-1.5 border-ink">
+                        <span className="pl-3 text-accent">
+                            <Youtube size={18} />
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="Paste YouTube URL here..."
+                            value={videoUrl}
+                            onChange={(e) => setVideoUrl(e.target.value)}
+                            className="flex-grow p-2.5 bg-transparent text-ink placeholder-neutral-500 focus:outline-none font-mono text-[12px]"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    addVideo();
+                                }
+                            }}
+                        />
                     </div>
+                    <button
+                        onClick={addVideo}
+                        className="whitespace-nowrap bg-ink text-paper border-2 border-ink shadow-brutal-red px-5 py-2.5 font-bold font-mono text-[11px] flex items-center justify-center hover:translate-y-px transition-transform"
+                    >
+                        <Plus className="mr-1.5 h-4 w-4" /> ADD VIDEO
+                    </button>
+                    <button
+                        onClick={() => setIsBulkAddModalOpen(true)}
+                        className="whitespace-nowrap border-2 border-ink bg-white px-5 py-2.5 font-bold font-mono text-[11px] flex items-center justify-center hover:bg-paper"
+                    >
+                        <List className="mr-1.5 h-4 w-4" /> BULK ADD
+                    </button>
                 </div>
             </div>
 
